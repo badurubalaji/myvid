@@ -80,6 +80,10 @@ pub struct GstEngine {
     /// Source of the current file, needed to export a clip from it.
     source: Mutex<Option<String>>,
     exporting: Arc<AtomicBool>,
+    /// A flushing seek is in flight; the pipeline will refuse another.
+    seeking: AtomicBool,
+    /// Where to seek next once the current one lands.
+    pending_seek: Mutex<Option<Duration>>,
 }
 
 impl GstEngine {
@@ -118,6 +122,8 @@ impl GstEngine {
             collection: Mutex::new(None),
             source: Mutex::new(None),
             exporting: Arc::new(AtomicBool::new(false)),
+            seeking: AtomicBool::new(false),
+            pending_seek: Mutex::new(None),
         });
 
         engine.clone().watch_bus()?;
@@ -173,6 +179,9 @@ impl GstEngine {
                         MessageView::Buffering(b) => {
                             let percent = b.percent().clamp(0, 100) as u8;
                             (self.emit)(Event::Buffering(percent));
+                        }
+                        MessageView::AsyncDone(_) => {
+                            self.seek_settled();
                         }
                         MessageView::DurationChanged(_) => {
                             if let Some(d) = query_duration(&pipeline) {
@@ -445,6 +454,31 @@ impl GstEngine {
         (self.emit)(Event::Tracks(tracks));
     }
 
+    fn issue_seek(&self, to: Duration) {
+        self.seeking.store(true, Ordering::Release);
+        let target = gst::ClockTime::from_nseconds(to.as_nanos() as u64);
+
+        if self
+            .playbin
+            .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT, target)
+            .is_err()
+        {
+            self.seeking.store(false, Ordering::Release);
+            // Not surfaced: a refused seek is not something the user did, and
+            // the next one along will land.
+            eprintln!("myvid: pipeline refused a seek to {:.2}s", to.as_secs_f64());
+        }
+    }
+
+    /// Called when the pipeline reports a seek has completed.
+    fn seek_settled(&self) {
+        self.seeking.store(false, Ordering::Release);
+        let next = self.pending_seek.lock().unwrap().take();
+        if let Some(next) = next {
+            self.issue_seek(next);
+        }
+    }
+
     fn set_state(&self, state: gst::State) {
         if let Err(err) = self.playbin.set_state(state) {
             (self.emit)(Event::Error(format!("could not enter {state:?}: {err}")));
@@ -459,6 +493,8 @@ impl PlaybackEngine for GstEngine {
             .context("resetting pipeline")?;
         self.slot.clear();
         self.reported_info.store(false, Ordering::Relaxed);
+        self.seeking.store(false, Ordering::Release);
+        *self.pending_seek.lock().unwrap() = None;
         *self.source.lock().unwrap() = Some(uri.to_owned());
         self.tracks.lock().unwrap().clear();
         *self.collection.lock().unwrap() = None;
@@ -478,14 +514,20 @@ impl PlaybackEngine for GstEngine {
         self.set_state(gst::State::Paused);
     }
 
+    /// Seek, coalescing anything that arrives while one is already running.
+    ///
+    /// Dragging the scrub bar produces a seek per pixel of movement. A flushing
+    /// seek takes time to resolve and the pipeline refuses a second one until it
+    /// has, so firing them all made most of them fail — reported to the user as
+    /// "Failed to seek" for doing nothing but dragging. Only one seek is ever in
+    /// flight; the newest target supersedes any waiting one, because an
+    /// intermediate position during a drag is of no interest.
     fn seek(&self, to: Duration) {
-        let target = gst::ClockTime::from_nseconds(to.as_nanos() as u64);
-        if let Err(err) = self.playbin.seek_simple(
-            gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT,
-            target,
-        ) {
-            (self.emit)(Event::Error(format!("seek failed: {err}")));
+        if self.seeking.load(Ordering::Acquire) {
+            *self.pending_seek.lock().unwrap() = Some(to);
+            return;
         }
+        self.issue_seek(to);
     }
 
     fn position(&self) -> Option<Duration> {
@@ -1373,6 +1415,41 @@ mod hardware_tests {
 mod reopen_tests {
     use super::*;
     use std::sync::mpsc;
+
+    /// Dragging the scrub bar fires a seek per pixel of movement. Every one of
+    /// those used to be sent straight at the pipeline, which refuses a seek
+    /// while a flush is still resolving, so most failed and each failure was
+    /// reported to the user.
+    #[test]
+    fn a_burst_of_seeks_does_not_error() {
+        let Some(media) = std::env::var_os("MYVID_TEST_MEDIA") else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA");
+            return;
+        };
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let emit: EventSink = Arc::new(move |event| {
+            if let Event::Error(message) = event {
+                let _ = tx.send(message);
+            }
+        });
+
+        let engine = GstEngine::new(emit).expect("engine");
+        let uri = crate::engine::to_uri(&media.to_string_lossy()).expect("uri");
+        engine.open(&uri).expect("open");
+        engine.play();
+        std::thread::sleep(Duration::from_secs(2));
+
+        // A drag across the bar, at the rate a pointer actually produces.
+        for step in 0..80 {
+            engine.seek(Duration::from_millis(1_000 + step * 250));
+            std::thread::sleep(Duration::from_millis(8));
+        }
+        std::thread::sleep(Duration::from_secs(2));
+
+        let errors: Vec<String> = rx.try_iter().collect();
+        assert!(errors.is_empty(), "a scrub produced errors: {errors:#?}");
+    }
 
     /// Opening a second file into a live pipeline — what dragging a file onto a
     /// playing window does — must not error. `playsink` keeps state across a

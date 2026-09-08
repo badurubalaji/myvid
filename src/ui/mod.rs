@@ -1385,9 +1385,36 @@ fn engine_events() -> impl iced::futures::Stream<Item = engine::Event> {
             }
         }
 
-        while let Some(event) = rx.next().await {
-            if output.send(event).await.is_err() {
-                break;
+        // Forward events, collapsing frame notices.
+        //
+        // The engine posts one per decoded frame into an unbounded queue, and
+        // this feeds a bounded one. If the UI falls even slightly behind, those
+        // notices pile up without limit and every redraw shows a frame the audio
+        // has already passed — the picture drifts further behind the sound the
+        // longer it plays. Only the newest frame is worth drawing, so anything
+        // already waiting is dropped in favour of it.
+        let mut batch: Vec<engine::Event> = Vec::new();
+
+        while let Some(first) = rx.next().await {
+            batch.clear();
+            batch.push(first);
+            while let Ok(next) = rx.try_recv() {
+                batch.push(next);
+            }
+
+            let newest_frame = batch
+                .iter()
+                .rposition(|event| matches!(event, engine::Event::Frame(..)));
+
+            for (index, event) in batch.drain(..).enumerate() {
+                let superseded = matches!(event, engine::Event::Frame(..))
+                    && Some(index) != newest_frame;
+                if superseded {
+                    continue;
+                }
+                if output.send(event).await.is_err() {
+                    return;
+                }
             }
         }
     })
