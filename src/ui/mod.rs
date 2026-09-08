@@ -210,6 +210,12 @@ impl Myvid {
 
             Message::Skip(seconds) => {
                 self.wake();
+                // Nothing open, or a live source with no duration, cannot be
+                // seeked. Saying nothing beats reporting a failure the user did
+                // not cause.
+                if self.source.is_none() || self.duration.is_none() {
+                    return Task::none();
+                }
                 if let Some(engine) = &self.engine {
                     let target = if seconds.is_negative() {
                         self.position
@@ -506,29 +512,45 @@ impl Myvid {
             };
         }
 
+        let (letter, ctrl) = chord(&key, modifiers);
+
+        // Ctrl chords are their own namespace. Keeping them in the same match as
+        // the single-key shortcuts meant that when the modifier did not come
+        // through, Ctrl+L fell past its guard onto plain L and seeked instead of
+        // opening the URL prompt — and Ctrl+O marked a clip point.
+        if ctrl {
+            let message = match letter.as_deref() {
+                Some("l") => Some(Message::ShowUrlPrompt),
+                Some("o") => Some(Message::OpenDialog),
+                _ => None,
+            };
+            return match message {
+                Some(message) => self.update(message),
+                None => Task::none(),
+            };
+        }
+
         let message = match key.as_ref() {
-            Key::Character("l") if modifiers.command() => Some(Message::ShowUrlPrompt),
             Key::Named(Named::Space) => Some(Message::TogglePlay),
             Key::Named(Named::ArrowLeft) => Some(Message::Skip(-5)),
             Key::Named(Named::ArrowRight) => Some(Message::Skip(5)),
             Key::Named(Named::ArrowUp) => Some(Message::SetVolume(self.volume + 0.05)),
             Key::Named(Named::ArrowDown) => Some(Message::SetVolume(self.volume - 0.05)),
             Key::Named(Named::Escape) if self.fullscreen => Some(Message::ToggleFullscreen),
-            Key::Character("j") => Some(Message::Skip(-SKIP)),
-            Key::Character("l") => Some(Message::Skip(SKIP)),
-            Key::Character("k") => Some(Message::TogglePlay),
-            Key::Character("f") => Some(Message::ToggleFullscreen),
-            Key::Character("m") => Some(Message::ToggleMute),
-            // Ctrl+O opens a file; bare O marks a clip out point, as every
-            // editor binds it.
-            Key::Character("o") if modifiers.command() => Some(Message::OpenDialog),
-            Key::Character("o") => Some(Message::MarkOut),
-            Key::Character("i") => Some(Message::MarkIn),
-            Key::Character("t") => Some(Message::TogglePanel),
-            Key::Character("e") if self.clip_in.is_some() => Some(Message::ExportClip),
-            Key::Character("[") => Some(Message::StepRate(-1)),
-            Key::Character("]") => Some(Message::StepRate(1)),
-            _ => None,
+            _ => match letter.as_deref() {
+                Some("j") => Some(Message::Skip(-SKIP)),
+                Some("l") => Some(Message::Skip(SKIP)),
+                Some("k") => Some(Message::TogglePlay),
+                Some("f") => Some(Message::ToggleFullscreen),
+                Some("m") => Some(Message::ToggleMute),
+                Some("o") => Some(Message::MarkOut),
+                Some("i") => Some(Message::MarkIn),
+                Some("t") => Some(Message::TogglePanel),
+                Some("e") if self.clip_in.is_some() => Some(Message::ExportClip),
+                Some("[") => Some(Message::StepRate(-1)),
+                Some("]") => Some(Message::StepRate(1)),
+                _ => None,
+            },
         };
 
         match message {
@@ -1187,6 +1209,33 @@ fn icon_button<'a>(glyph: Glyph, size: f32, message: Message) -> Element<'a, Mes
         .into()
 }
 
+/// The letter a key press represents, and whether Ctrl was held.
+///
+/// Compositors disagree about Ctrl chords: some deliver Ctrl+L as `Character("l")`
+/// with a Ctrl modifier, others as the control character U+000C with no modifier
+/// set at all. Handling only the first spelling is why Ctrl+L seeked.
+fn chord(key: &iced::keyboard::Key, modifiers: iced::keyboard::Modifiers) -> (Option<String>, bool) {
+    let iced::keyboard::Key::Character(text) = key.as_ref() else {
+        return (None, modifiers.command());
+    };
+
+    let mut chars = text.chars();
+    let (Some(c), None) = (chars.next(), chars.next()) else {
+        return (None, modifiers.command());
+    };
+
+    // C0 control characters: Ctrl+A is 0x01 through Ctrl+Z at 0x1A.
+    if ('\u{1}'..='\u{1a}').contains(&c) {
+        let letter = (b'a' + (c as u8 - 1)) as char;
+        return (Some(letter.to_string()), true);
+    }
+
+    (
+        Some(c.to_lowercase().to_string()),
+        modifiers.command(),
+    )
+}
+
 fn section<'a>(title: &'a str) -> Element<'a, Message> {
     text(title).size(10).color(theme::FAINT).into()
 }
@@ -1342,4 +1391,53 @@ fn engine_events() -> impl iced::futures::Stream<Item = engine::Event> {
             }
         }
     })
+}
+
+#[cfg(test)]
+mod chord_tests {
+    use super::chord;
+    use iced::keyboard::{Key, Modifiers};
+
+    fn character(text: &str) -> Key {
+        Key::Character(text.into())
+    }
+
+    #[test]
+    fn reads_a_ctrl_chord_reported_as_a_modifier() {
+        let (letter, ctrl) = chord(&character("l"), Modifiers::CTRL);
+        assert_eq!(letter.as_deref(), Some("l"));
+        assert!(ctrl);
+    }
+
+    /// Some compositors send Ctrl+L as U+000C with no modifier set. Missing this
+    /// spelling is what made Ctrl+L seek forward instead of opening a URL.
+    #[test]
+    fn reads_a_ctrl_chord_reported_as_a_control_character() {
+        let (letter, ctrl) = chord(&character("\u{c}"), Modifiers::empty());
+        assert_eq!(letter.as_deref(), Some("l"));
+        assert!(ctrl);
+
+        let (letter, ctrl) = chord(&character("\u{f}"), Modifiers::empty());
+        assert_eq!(letter.as_deref(), Some("o"));
+        assert!(ctrl);
+    }
+
+    #[test]
+    fn leaves_plain_keys_unmodified() {
+        let (letter, ctrl) = chord(&character("l"), Modifiers::empty());
+        assert_eq!(letter.as_deref(), Some("l"));
+        assert!(!ctrl);
+    }
+
+    #[test]
+    fn folds_shifted_letters_to_lowercase() {
+        let (letter, _) = chord(&character("O"), Modifiers::SHIFT);
+        assert_eq!(letter.as_deref(), Some("o"));
+    }
+
+    #[test]
+    fn ignores_keys_that_are_not_single_characters() {
+        assert_eq!(chord(&Key::Named(iced::keyboard::key::Named::Space), Modifiers::empty()).0, None);
+        assert_eq!(chord(&character("ab"), Modifiers::empty()).0, None);
+    }
 }
