@@ -6,16 +6,20 @@
 
 pub mod frame;
 pub mod gst;
+pub mod protocol;
+pub mod remote;
+pub mod sandbox;
+pub mod shm;
+pub mod worker;
 
 pub use frame::{FrameSlot, PlanarFrame};
-pub use gst::GstEngine;
 
 use std::fmt;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bincode::Encode, bincode::Decode)]
 pub enum State {
     Idle,
     Playing,
@@ -31,7 +35,7 @@ impl State {
 
 /// What the container and codecs actually turned out to be — read from pad caps
 /// and stream tags, never guessed from the filename.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, bincode::Encode, bincode::Decode)]
 pub struct MediaInfo {
     pub title: String,
     pub width: u32,
@@ -45,7 +49,7 @@ pub struct MediaInfo {
     pub hardware: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bincode::Encode, bincode::Decode)]
 pub enum TrackKind {
     Audio,
     Text,
@@ -53,7 +57,7 @@ pub enum TrackKind {
 
 /// One selectable stream, described the way someone choosing between them needs
 /// to see it — the codec and channel count, not just the language.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub struct Track {
     pub id: String,
     pub kind: TrackKind,

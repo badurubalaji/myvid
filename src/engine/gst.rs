@@ -1102,7 +1102,7 @@ fn audio_facts(stream: &gst::Stream) -> (i32, i32, u32) {
 ///
 /// The cost is a runtime dependency on the `ffmpeg` binary. `install.sh` pulls
 /// it in; if it is missing, say so plainly rather than failing obscurely.
-fn run_export(uri: &str, request: &ClipRequest, emit: &EventSink) -> Result<()> {
+pub(crate) fn run_export(uri: &str, request: &ClipRequest, emit: &EventSink) -> Result<()> {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
 

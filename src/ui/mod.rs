@@ -1370,7 +1370,11 @@ fn engine_events() -> impl iced::futures::Stream<Item = engine::Event> {
             let _ = tx.unbounded_send(event);
         });
 
-        match engine::GstEngine::new(sink) {
+        // Decoding happens in its own confined process. If that cannot be
+        // started there is nothing to fall back to that would be honest: an
+        // in-process decoder would work, but silently without the isolation the
+        // user was told they had.
+        match engine::remote::RemoteEngine::spawn(sink) {
             Ok(engine) => {
                 let engine: Arc<dyn PlaybackEngine> = engine;
                 let _ = output.send(engine::Event::Ready(engine)).await;
@@ -1378,7 +1382,7 @@ fn engine_events() -> impl iced::futures::Stream<Item = engine::Event> {
             Err(err) => {
                 let _ = output
                     .send(engine::Event::Error(format!(
-                        "could not start the playback engine: {err:#}"
+                        "could not start the decode process: {err:#}"
                     )))
                     .await;
                 return;

@@ -107,6 +107,23 @@ software there is correct rather than a failure.
 Subtitles: SubRip and ASS/SSA render as text. PGS and VobSub are bitmap formats
 and are not drawn yet.
 
+## Isolation
+
+Decoding runs in a separate process, confined with Landlock. A file that
+compromises a demuxer gets a process that cannot read your documents, your keys
+or your browser profile, and cannot write anywhere outside the GPU and the audio
+socket. The decoder is handed the media as an open descriptor and never learns
+where it lives.
+
+```
+myvid decoder: landlock: enforced
+[diag] decoder can read $HOME: no
+```
+
+If the kernel is too old for Landlock the decoder still runs in its own process
+and says so rather than pretending. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for what stays reachable and why.
+
 ## Diagnostics
 
 ```sh
