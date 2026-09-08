@@ -55,8 +55,13 @@ pub enum Notice {
     /// A new shared frame buffer, attached as a descriptor. Sent whenever the
     /// stream's resolution changes.
     Surface(Layout),
-    /// Slot `slot` now holds frame `generation`.
-    Frame { slot: u32, generation: u64 },
+    /// Slot `slot` now holds frame `generation`, handed over at `sent_ns`
+    /// (nanoseconds since the epoch, so both processes read the same clock).
+    Frame {
+        slot: u32,
+        generation: u64,
+        sent_ns: u64,
+    },
     Subtitle {
         text: Option<String>,
         start: u64,

@@ -88,6 +88,9 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
     spawn_reader(channel.clone(), tx.clone());
     spawn_ticker(tx);
 
+    let diagnostics = std::env::var_os("MYVID_DIAG").is_some();
+    let mut last_report = std::time::Instant::now();
+
     let slot = engine.frames();
     let mut surface: Option<Arc<Surface>> = None;
     let mut generation: u64 = 0;
@@ -134,6 +137,19 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
             Incoming::Tick => {
                 if let Some(position) = engine.position() {
                     channel.send(&Notice::Position(position.as_nanos() as u64), None)?;
+
+                    if diagnostics && last_report.elapsed() >= Duration::from_secs(1) {
+                        last_report = std::time::Instant::now();
+                        let picture = engine.last_frame();
+                        // Positive means the picture is behind the sound.
+                        let gap =
+                            position.as_secs_f64() - picture.as_secs_f64();
+                        eprintln!(
+                            "[diag] a/v gap {gap:+.3}s (sound {:.2}s, picture {:.2}s)",
+                            position.as_secs_f64(),
+                            picture.as_secs_f64()
+                        );
+                    }
                 }
             }
 
@@ -209,12 +225,20 @@ fn publish_frame(
             &Notice::Frame {
                 slot: slot_index,
                 generation: *generation,
+                sent_ns: epoch_nanos(),
             },
             None,
         )?;
     }
 
     Ok(())
+}
+
+fn epoch_nanos() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0)
 }
 
 fn translate(event: Event) -> Option<Notice> {

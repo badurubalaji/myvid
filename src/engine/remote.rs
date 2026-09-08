@@ -72,6 +72,10 @@ impl RemoteEngine {
             .name("myvid-decoder".into())
             .spawn(move || {
                 let mut surface: Option<Arc<Surface>> = None;
+                let diagnostics = std::env::var_os("MYVID_DIAG").is_some();
+                let mut delivered: u64 = 0;
+                let mut transit_ns: u64 = 0;
+                let mut last_report = std::time::Instant::now();
 
                 loop {
                     let received = self.channel.recv::<Notice>();
@@ -99,7 +103,27 @@ impl RemoteEngine {
                             }
                         }
 
-                        Notice::Frame { slot, .. } => {
+                        Notice::Frame {
+                            slot,
+                            generation,
+                            sent_ns,
+                        } => {
+                            if diagnostics {
+                                delivered += 1;
+                                let now = std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .map(|d| d.as_nanos() as u64)
+                                    .unwrap_or(0);
+                                transit_ns += now.saturating_sub(sent_ns);
+                                if last_report.elapsed() >= Duration::from_secs(1) {
+                                    last_report = std::time::Instant::now();
+                                    eprintln!(
+                                        "[diag] delivery: {delivered} frames, {} behind decoder, transit {:.1} ms avg",
+                                        generation.saturating_sub(delivered),
+                                        transit_ns as f64 / delivered.max(1) as f64 / 1e6
+                                    );
+                                }
+                            }
                             let Some(surface) = surface.as_ref() else {
                                 continue;
                             };

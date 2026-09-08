@@ -104,13 +104,33 @@ and, when the render target is an sRGB format, converts to linear so the
 hardware's re-encode does not double-apply the transfer. This is the seam where
 HDR tone mapping goes later.
 
-**The audio path is short and stays in float.** `audioconvert` -> `audioresample`
-(quality 10, not the default 4) -> a `F32LE` caps filter -> `pipewiresink`, falling
-back to `pulsesink` then `autoaudiosink`. Nothing quantises until the sink does
-the single conversion to the device format, with TPDF dither. Going straight to
-PipeWire rather than through the Pulse compatibility socket removes one layer
-that can silently resample. When the file's rate already matches the device — 48
-kHz here — no resampling happens at all.
+**The audio sink is chosen for its clock, then for its quality.** This is where
+the two pull against each other, and timing has to win.
+
+The first version picked `pipewiresink`, to talk to PipeWire directly and skip
+the Pulse compatibility layer — one fewer place a hidden resample could happen.
+That reasoning was written down here as a virtue. It was also wrong:
+`pipewiresink` provides no clock, so the pipeline ran on `GstSystemClock` while
+the sound card consumed samples at its own crystal rate. Two oscillators tens of
+parts per million apart are inaudible for a second and a visible lip-sync error
+after ten minutes. That was this player's progressive A/V drift, and it took
+measuring the whole chain to find, because everything downstream was blameless:
+the decoder's own A/V gap was flat, frames arrived 0.2 ms after being sent with
+no backlog, and the renderer displayed 24-25 fps.
+
+Sinks are now tried in order of whether they provide a clock — `pulsesink`
+(`GstPulseSinkClock`), `alsasink`, `autoaudiosink`, and `pipewiresink` only as a
+last resort, with a warning that sync may wander. On any modern desktop
+`pipewire-pulse` answers `pulsesink`, so the audio still reaches PipeWire and the
+pipeline is driven by the device actually playing it.
+
+**The conversion chain lives in `audio-filter`, not around the sink.** Wrapping
+the sink in a bin hides the sink's clock from the pipeline, which was the other
+half of the same bug. Quality is unchanged: `audioconvert` -> `audioresample`
+(quality 10, not the default 4) -> an `F32LE` caps filter, so nothing quantises
+until the sink makes the single conversion to the device format, with TPDF
+dither. When the file's rate already matches the device — 48 kHz here — no
+resampling happens at all.
 
 **The best audio track is chosen, not the first one.** playbin3 defaults to the
 first stream of each kind. On a `StreamCollection` message we score audio streams
@@ -231,10 +251,24 @@ showing subtitles. It now accepts anything and skips what cannot be drawn.
 
 ## Diagnostics
 
-`MYVID_DIAG=1 myvid <file>` reports, once a second, the frame count, resolution,
-pixel format and plane strides, plus the video and audio decoders in use and
-whether video decode is hardware-accelerated. It is the only way to tell "no
-frames" apart from "frames, but nothing on screen".
+`MYVID_DIAG=1 myvid <file>` reports, once a second: frame count, resolution,
+pixel format and plane strides; the video and audio decoders actually chosen and
+whether video decode is hardware-accelerated; which clock drives the pipeline;
+the measured gap between sound and picture; how far frame delivery is behind the
+decoder and its transit time; and how many frames reached the screen.
+
+That set is not decoration — it exists because A/V drift was chased three times
+by reasoning and found once by measuring. Each number rules out one link in the
+chain, which is what turned "sometimes out of sync" into "the pipeline is on the
+wrong clock".
+
+```
+[diag] clock: GstPulseSinkClock
+[diag] a/v gap +0.014s (sound 14.47s, picture 14.46s)
+[diag] delivery: 255 frames, 0 behind decoder, transit 0.2 ms avg
+[diag] displayed 24 frames in the last second
+[diag] decoder can read $HOME: no
+```
 
 ## Icon
 

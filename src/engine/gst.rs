@@ -80,6 +80,9 @@ pub struct GstEngine {
     /// Source of the current file, needed to export a clip from it.
     source: Mutex<Option<String>>,
     exporting: Arc<AtomicBool>,
+    /// Running time of the most recent frame handed to the renderer, so the gap
+    /// between picture and sound can be measured rather than guessed at.
+    last_frame_ns: Arc<AtomicU64>,
     /// A flushing seek is in flight; the pipeline will refuse another.
     seeking: AtomicBool,
     /// Where to seek next once the current one lands.
@@ -108,9 +111,11 @@ impl GstEngine {
         playbin.set_property("buffer-duration", 5i64 * gst::ClockTime::SECOND.nseconds() as i64);
 
         let slot = FrameSlot::new();
-        let sink = build_video_sink(&slot, &emit)?;
+        let last_frame_ns = Arc::new(AtomicU64::new(0));
+        let sink = build_video_sink(&slot, &emit, last_frame_ns.clone())?;
         playbin.set_property("video-sink", &sink);
         playbin.set_property("audio-sink", &build_audio_sink()?);
+        playbin.set_property("audio-filter", &build_audio_filter()?);
 
         let engine = Arc::new(Self {
             playbin,
@@ -122,6 +127,7 @@ impl GstEngine {
             collection: Mutex::new(None),
             source: Mutex::new(None),
             exporting: Arc::new(AtomicBool::new(false)),
+            last_frame_ns,
             seeking: AtomicBool::new(false),
             pending_seek: Mutex::new(None),
         });
@@ -240,6 +246,16 @@ impl GstEngine {
 
                                 if state == State::Playing {
                                     if std::env::var_os("MYVID_DIAG").is_some() {
+                                        // Which element drives the pipeline
+                                        // decides whether sound and picture can
+                                        // drift apart at all.
+                                        eprintln!(
+                                            "[diag] clock: {}",
+                                            pipeline
+                                                .clock()
+                                                .map(|c| c.name().to_string())
+                                                .unwrap_or_else(|| "none".into())
+                                        );
                                         let (video, audio) = decoders(&pipeline);
                                         eprintln!(
                                             "[diag] video: {} ({}) · audio: {}",
@@ -471,6 +487,11 @@ impl GstEngine {
     }
 
     /// Called when the pipeline reports a seek has completed.
+    /// Presentation time of the newest frame, for measuring A/V drift.
+    pub fn last_frame(&self) -> Duration {
+        Duration::from_nanos(self.last_frame_ns.load(Ordering::Relaxed))
+    }
+
     fn seek_settled(&self) {
         self.seeking.store(false, Ordering::Release);
         let next = self.pending_seek.lock().unwrap().take();
@@ -632,7 +653,11 @@ impl Drop for GstEngine {
 /// `videoconvert ! appsink(NV12)` wrapped in a bin that playbin can use as its
 /// video sink. Hardware decoders already emit NV12, so the converter is usually
 /// a passthrough.
-fn build_video_sink(slot: &FrameSlot, emit: &EventSink) -> Result<gst::Element> {
+fn build_video_sink(
+    slot: &FrameSlot,
+    emit: &EventSink,
+    last_frame_ns: Arc<AtomicU64>,
+) -> Result<gst::Element> {
     let convert = gst::ElementFactory::make("videoconvert")
         .build()
         .context("videoconvert missing — install gstreamer1.0-plugins-base")?;
@@ -673,6 +698,14 @@ fn build_video_sink(slot: &FrameSlot, emit: &EventSink) -> Result<gst::Element> 
 
                 let (width, height) = (info.width(), info.height());
                 let strides = info.stride();
+
+                // What the pipeline thinks this frame's moment is. Against the
+                // playback position, which the audio sink drives, this is the
+                // real A/V offset — measured rather than assumed.
+                if let Some(pts) = sample.buffer().and_then(|b| b.pts()) {
+                    last_frame_ns.store(pts.nseconds(), Ordering::Relaxed);
+                }
+
                 slot.write(|f| f.set(Box::new(GstFrame::new(frame, &info))));
 
                 emit(Event::Frame(width, height));
@@ -868,16 +901,50 @@ fn clean_cue(raw: &str) -> String {
     out.trim().to_owned()
 }
 
-/// A deliberately short, high-quality audio path.
+/// The audio sink, chosen for its clock before anything else.
 ///
-/// Everything downstream of the decoder runs in 32-bit float so no intermediate
-/// stage quantises, resampling (when a file needs it at all) uses the best
-/// kernel GStreamer has rather than the default, and the sink is chosen to sit
-/// as close to the audio server as possible — every extra compatibility layer is
-/// another chance for a hidden resample.
+/// This is where "best quality" and "stays in sync" pull against each other, and
+/// sync has to win. `pipewiresink` talks to PipeWire directly and skips the Pulse
+/// compatibility layer — but it provides no clock, so the pipeline runs on the
+/// system clock while the sound card consumes samples at its own crystal rate.
+/// Those two oscillators differ by tens of parts per million: inaudible for a
+/// second, a visible lip-sync error after ten minutes. That was this player's
+/// drift, and it came of choosing a sink for throughput rather than timing.
+///
+/// `pulsesink` provides `GstPulseSinkClock`, and on any modern desktop it is
+/// answered by `pipewire-pulse` anyway — so the audio still reaches PipeWire, and
+/// the pipeline is driven by the device actually playing it.
 fn build_audio_sink() -> Result<gst::Element> {
+    for name in ["pulsesink", "alsasink", "autoaudiosink", "pipewiresink"] {
+        let Ok(sink) = gst::ElementFactory::make(name).build() else {
+            continue;
+        };
+        if sink
+            .element_flags()
+            .contains(gst::ElementFlags::PROVIDE_CLOCK)
+        {
+            return Ok(sink);
+        }
+    }
+
+    // Nothing here provides a clock. Play anyway, and say why sync may wander.
+    let sink = gst::ElementFactory::make("autoaudiosink")
+        .build()
+        .context("no usable audio sink — install gstreamer1.0-pulseaudio")?;
+    eprintln!("myvid: no audio sink provides a clock; A/V sync may drift");
+    Ok(sink)
+}
+
+/// Conversion and resampling, inserted by playbin *before* the sink.
+///
+/// This lives in `audio-filter` rather than in a bin wrapped around the sink,
+/// because a bin around the sink hides the sink's clock from the pipeline — the
+/// other half of the same bug. The quality of the chain is unchanged: everything
+/// stays in 32-bit float so nothing quantises until the sink makes the single
+/// conversion to the device format, resampling uses the best kernel GStreamer
+/// has rather than the default, and TPDF dither is applied on the way down.
+fn build_audio_filter() -> Result<gst::Element> {
     let convert = gst::ElementFactory::make("audioconvert")
-        // TPDF is the correct dither for a final bit-depth reduction.
         .property_from_str("dithering", "tpdf")
         .build()
         .context("audioconvert missing — install gstreamer1.0-plugins-base")?;
@@ -887,8 +954,6 @@ fn build_audio_sink() -> Result<gst::Element> {
         .build()
         .context("audioresample missing — install gstreamer1.0-plugins-base")?;
 
-    // Stay in float until the sink does the one and only conversion to the
-    // device format.
     let float = gst::ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -899,24 +964,22 @@ fn build_audio_sink() -> Result<gst::Element> {
         .build()
         .context("capsfilter missing")?;
 
-    // PipeWire directly where it exists; otherwise the Pulse compatibility
-    // socket; otherwise let GStreamer decide.
-    let sink = ["pipewiresink", "pulsesink", "autoaudiosink"]
-        .iter()
-        .find_map(|name| gst::ElementFactory::make(name).build().ok())
-        .ok_or_else(|| anyhow!("no usable audio sink — install gstreamer1.0-pipewire or gstreamer1.0-pulseaudio"))?;
-
     let bin = gst::Bin::new();
-    bin.add_many([&convert, &resample, &float, &sink])
-        .context("assembling audio sink")?;
-    gst::Element::link_many([&convert, &resample, &float, &sink])
-        .context("linking audio sink")?;
+    bin.add_many([&convert, &resample, &float])
+        .context("assembling the audio filter")?;
+    gst::Element::link_many([&convert, &resample, &float]).context("linking the audio filter")?;
 
-    let pad = convert
+    let sink_pad = convert
         .static_pad("sink")
         .ok_or_else(|| anyhow!("audioconvert has no sink pad"))?;
-    let ghost = gst::GhostPad::with_target(&pad).context("ghosting audio sink pad")?;
-    bin.add_pad(&ghost).context("adding audio ghost pad")?;
+    let src_pad = float
+        .static_pad("src")
+        .ok_or_else(|| anyhow!("capsfilter has no src pad"))?;
+
+    bin.add_pad(&gst::GhostPad::with_target(&sink_pad).context("ghosting the filter input")?)
+        .context("adding the filter input")?;
+    bin.add_pad(&gst::GhostPad::with_target(&src_pad).context("ghosting the filter output")?)
+        .context("adding the filter output")?;
 
     Ok(bin.upcast())
 }

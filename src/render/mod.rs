@@ -90,6 +90,9 @@ pub struct VideoPipeline {
     planes: Option<Planes>,
     /// Generation of the frame currently on the GPU.
     uploaded: u64,
+    /// Uploads since the last report, for measuring the real display rate.
+    shown: u64,
+    reported_at: Option<std::time::Instant>,
     srgb: bool,
 }
 
@@ -184,6 +187,8 @@ impl shader::Pipeline for VideoPipeline {
             uniforms,
             planes: None,
             uploaded: 0,
+            shown: 0,
+            reported_at: None,
             srgb: format.is_srgb(),
         }
     }
@@ -238,6 +243,16 @@ impl VideoPipeline {
             }
 
             self.uploaded = frame.generation();
+
+            if std::env::var_os("MYVID_DIAG").is_some() {
+                self.shown += 1;
+                let started = self.reported_at.get_or_insert_with(std::time::Instant::now);
+                if started.elapsed() >= std::time::Duration::from_secs(1) {
+                    eprintln!("[diag] displayed {} frames in the last second", self.shown);
+                    self.shown = 0;
+                    self.reported_at = Some(std::time::Instant::now());
+                }
+            }
         });
     }
 
