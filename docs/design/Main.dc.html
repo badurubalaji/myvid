@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1800px; height:1060px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Modern — Playing</div>
+    <div class="sheetmeta">A1 · 1440 × 900 · chrome visible</div>
+  </div>
+
+  <!-- ── app window ─────────────────────────────────────────── -->
+  <div style="position:absolute; left:40px; top:84px; width:1440px; height:900px; border-radius:10px; overflow:hidden; background:#0a0a09; box-shadow:0 18px 50px rgba(30,26,20,.20), 0 2px 6px rgba(30,26,20,.10);">
+
+    <!-- video surface -->
+    <div class="hatch" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:14px;">
+        <div style="position:relative; width:260px; height:146px; border:1px solid rgba(255,255,255,.11);">
+          <div style="position:absolute; inset:0; background:linear-gradient(to bottom right, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+          <div style="position:absolute; inset:0; background:linear-gradient(to bottom left, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+        </div>
+        <div class="mono" style="font-size:10px; letter-spacing:.13em; color:#5d5850; text-transform:uppercase; text-align:center; line-height:1.9;">
+          video surface<br>
+          <span style="color:#464139;">iced shader widget · wgpu 27 · NV12 → RGB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- top scrim + title bar -->
+    <div style="position:absolute; left:0; top:0; right:0; height:110px; background:linear-gradient(to bottom, rgba(0,0,0,.66), rgba(0,0,0,0)); pointer-events:none;"></div>
+    <div style="position:absolute; left:0; top:0; right:0; height:46px; display:flex; align-items:center; justify-content:space-between; padding:0 18px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="mono" style="font-size:11px; font-weight:600; letter-spacing:.16em; color:{{accent}}; text-transform:uppercase;">myvid</div>
+        <div style="width:1px; height:13px; background:rgba(255,255,255,.16);"></div>
+        <div style="font-size:12.5px; color:#ded8cd; font-weight:500;">Sintel — 2010 (Blender Foundation)</div>
+        <div class="mono" style="font-size:10px; color:#75705f; letter-spacing:.04em;">2160p · HEVC Main10 · MKV</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:20px;">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#a49d90" stroke-width="1.3"><path d="M1 7h12"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#a49d90" stroke-width="1.3"><rect x="1.5" y="1.5" width="11" height="11"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#a49d90" stroke-width="1.3"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+
+    <!-- subtitle -->
+    <div style="position:absolute; left:0; right:0; bottom:196px; display:flex; justify-content:center;">
+      <div style="font-size:23px; font-weight:500; color:#ffffff; text-align:center; line-height:1.35; text-shadow:0 0 5px rgba(0,0,0,.95), 0 2px 9px rgba(0,0,0,.85); max-width:900px;">
+        It seems that you have some kind of<br>a curse upon you.
+      </div>
+    </div>
+
+    <!-- tooltip -->
+    <div style="position:absolute; left:96px; bottom:150px; display:flex; align-items:center; gap:7px; padding:5px 9px; border-radius:6px; background:rgba(24,22,19,.94); border:1px solid rgba(255,255,255,.09);">
+      <span style="font-size:11px; color:#e2ddd2;">Pause</span>
+      <span class="kbd">Space</span>
+    </div>
+
+    <!-- ── floating glass control bar ── -->
+    <div style="position:absolute; left:32px; right:32px; bottom:26px; border-radius:18px; background:rgba(19,18,16,.60); backdrop-filter:blur(30px) saturate(1.3); border:1px solid rgba(255,255,255,.085); box-shadow:0 10px 40px rgba(0,0,0,.45); padding:18px 22px 15px; display:flex; flex-direction:column; gap:15px;">
+
+      <!-- scrub bar -->
+      <div style="position:relative; height:7px; border-radius:4px; background:rgba(255,255,255,.13);">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:63%; border-radius:4px; background:rgba(255,255,255,.24);"></div>
+        <div style="position:absolute; left:0; top:0; bottom:0; width:44.5%; border-radius:4px; background:{{accent}};"></div>
+        <div style="position:absolute; left:44.5%; top:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:#ffffff; box-shadow:0 1px 5px rgba(0,0,0,.6);"></div>
+        <div style="position:absolute; left:11%; top:-2px; bottom:-2px; width:2px; background:rgba(10,10,9,.85);"></div>
+        <div style="position:absolute; left:27%; top:-2px; bottom:-2px; width:2px; background:rgba(10,10,9,.85);"></div>
+        <div style="position:absolute; left:52%; top:-2px; bottom:-2px; width:2px; background:rgba(10,10,9,.85);"></div>
+        <div style="position:absolute; left:71%; top:-2px; bottom:-2px; width:2px; background:rgba(10,10,9,.85);"></div>
+      </div>
+
+      <!-- transport row -->
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+
+        <div style="display:flex; align-items:center; gap:16px;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5V2.6L6.8 5.9 11 9.2V6.3"/><path d="M11 5.5a7.2 7.2 0 1 1-7 5.6"/><text x="12" y="15.6" font-size="6.4" fill="#ddd7cb" stroke="none" text-anchor="middle" font-family="IBM Plex Mono, monospace">10</text></svg>
+
+          <div style="width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.10); display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#f7f4ee"><rect x="6.5" y="4.5" width="4" height="15" rx="1"/><rect x="13.5" y="4.5" width="4" height="15" rx="1"/></svg>
+          </div>
+
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5.5V2.6L17.2 5.9 13 9.2V6.3"/><path d="M13 5.5a7.2 7.2 0 1 0 7 5.6"/><text x="12" y="15.6" font-size="6.4" fill="#ddd7cb" stroke="none" text-anchor="middle" font-family="IBM Plex Mono, monospace">10</text></svg>
+
+          <div style="display:flex; align-items:center; gap:9px; margin-left:6px;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.4L12 5.5v13L7.4 14.5H4z"/><path d="M16 9.4a4 4 0 0 1 0 5.2"/><path d="M18.6 7a7.6 7.6 0 0 1 0 10"/></svg>
+            <div style="position:relative; width:78px; height:4px; border-radius:2px; background:rgba(255,255,255,.16);">
+              <div style="position:absolute; left:0; top:0; bottom:0; width:72%; border-radius:2px; background:#ddd7cb;"></div>
+              <div style="position:absolute; left:72%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:#fff;"></div>
+            </div>
+          </div>
+
+          <div class="mono" style="font-size:11.5px; letter-spacing:.02em; margin-left:8px;">
+            <span style="color:#f1eee8;">01:12:44</span><span style="color:#6d685e;"> / 02:43:31</span>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:20px;">
+          <div class="mono" style="font-size:11.5px; color:#ddd7cb; font-weight:500;">1.0&times;</div>
+          <div style="display:flex; align-items:center; gap:5px;">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.5"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M7.5 12.4h3M13.5 12.4h3" stroke-linecap="round"/></svg>
+            <div style="width:4px; height:4px; border-radius:50%; background:{{accent}};"></div>
+          </div>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.6" stroke-linecap="round"><path d="M4 8h8M4 12h8M4 16h5"/><path d="M16 7.5v9M19 5.5v13"/></svg>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.6"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><rect x="12" y="11" width="8" height="6.5" rx="1.5" fill="#ddd7cb" stroke="none"/></svg>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.6"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5" stroke-linecap="round"/></svg>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/></svg>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:1006px; width:1200px;">
+    Default playback state. Chrome is a single floating surface — nothing is docked, nothing steals pixels from the frame.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1524px; top:96px; width:252px;"><b>Client-side decorations</b>No OS title bar. App mark, file title and a live format readout share the row with window controls. Drag anywhere in the top 46&nbsp;px to move.</div>
+    <div class="lead" style="left:1420px; top:106px; width:96px;"></div><div class="dot" style="left:1416px; top:103.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:262px; width:252px;"><b>Video surface</b>Frame is presented full-bleed; the shader owns colour conversion, tone mapping and scaling. Aspect letterboxing paints the artboard background, never bars we draw.</div>
+    <div class="lead" style="left:1370px; top:272px; width:146px;"></div><div class="dot" style="left:1366px; top:269.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:470px; width:252px;"><b>Subtitle safe area</b>Baseline sits 196&nbsp;px above the frame bottom so the glass bar never covers a line. Rises to 96&nbsp;px when chrome is hidden.</div>
+    <div class="lead" style="left:1330px; top:480px; width:186px;"></div><div class="dot" style="left:1326px; top:477.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:640px; width:252px;"><b>Scrub bar</b>Three stacked ranges — track, buffered, played — plus chapter cuts as 2&nbsp;px gaps. Grows 7&nbsp;px → 11&nbsp;px on pointer entry.</div>
+    <div class="lead" style="left:1400px; top:650px; width:116px;"></div><div class="dot" style="left:1396px; top:647.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:790px; width:252px;"><b>Transport cluster</b>Left = things you do constantly. Right = things you set once. Nothing is more than one click deep except tracks, which open the panel.</div>
+    <div class="lead" style="left:1400px; top:800px; width:116px;"></div><div class="dot" style="left:1396px; top:797.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:930px; width:252px;"><b>Idle behaviour</b>Bar and cursor fade after 2.4&nbsp;s of pointer idle, 340&nbsp;ms ease-out. Any pointer move, key or focus change brings them back instantly.</div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e0a34a","options":["#e0a34a","#5aa9e6","#7fb069","#e0654a"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#e0a34a', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

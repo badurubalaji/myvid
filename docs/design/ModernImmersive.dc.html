@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1800px; height:1060px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Modern — Immersive</div>
+    <div class="sheetmeta">A2 · chrome fading · t = 2.6 s</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:1440px; height:900px; border-radius:10px; overflow:hidden; background:#0a0a09; box-shadow:0 18px 50px rgba(30,26,20,.20), 0 2px 6px rgba(30,26,20,.10);">
+
+    <div class="hatch" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:14px;">
+        <div style="position:relative; width:260px; height:146px; border:1px solid rgba(255,255,255,.11);">
+          <div style="position:absolute; inset:0; background:linear-gradient(to bottom right, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+          <div style="position:absolute; inset:0; background:linear-gradient(to bottom left, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+        </div>
+        <div class="mono" style="font-size:10px; letter-spacing:.13em; color:#5d5850; text-transform:uppercase; text-align:center; line-height:1.9;">
+          video surface<br><span style="color:#464139;">nothing above it but the picture</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- subtitle rises to the lower safe line once chrome is gone -->
+    <div style="position:absolute; left:0; right:0; bottom:96px; display:flex; justify-content:center;">
+      <div style="font-size:23px; font-weight:500; color:#ffffff; text-align:center; line-height:1.35; text-shadow:0 0 5px rgba(0,0,0,.95), 0 2px 9px rgba(0,0,0,.85); max-width:900px;">
+        It seems that you have some kind of<br>a curse upon you.
+      </div>
+    </div>
+
+    <!-- ghosted chrome mid-fade -->
+    <div style="opacity:.13;">
+      <div style="position:absolute; left:0; top:0; right:0; height:110px; background:linear-gradient(to bottom, rgba(0,0,0,.66), rgba(0,0,0,0));"></div>
+      <div style="position:absolute; left:0; top:0; right:0; height:46px; display:flex; align-items:center; justify-content:space-between; padding:0 18px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="mono" style="font-size:11px; font-weight:600; letter-spacing:.16em; color:{{accent}}; text-transform:uppercase;">myvid</div>
+          <div style="width:1px; height:13px; background:rgba(255,255,255,.16);"></div>
+          <div style="font-size:12.5px; color:#ded8cd; font-weight:500;">Sintel — 2010 (Blender Foundation)</div>
+        </div>
+      </div>
+      <div style="position:absolute; left:32px; right:32px; bottom:26px; height:108px; border-radius:18px; background:rgba(19,18,16,.60); border:1px solid rgba(255,255,255,.085); padding:18px 22px 15px;">
+        <div style="position:relative; height:7px; border-radius:4px; background:rgba(255,255,255,.13);">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:44.5%; border-radius:4px; background:{{accent}};"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:1006px; width:1200px;">
+    Mid-fade, captured at 2.6&nbsp;s. The subtitle line moves down into the space the bar vacated — it does not sit still and leave a gap.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1524px; top:150px; width:252px;"><b>Fade timing</b>Pointer idle 2400&nbsp;ms, then opacity 1 → 0 over 340&nbsp;ms, cubic-bezier(.22,.61,.36,1). Cursor hides on the same curve.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:290px; width:252px;"><b>What wakes it</b>Pointer move &gt; 4&nbsp;px, any keypress, focus gained, media state change (pause, buffer, track switch, error). Wake is instant — no ease in.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:452px; width:252px;"><b>Never fades</b>Paused state, an open panel, an active drag on the scrub bar, and any error or buffering condition all hold the chrome visible.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:600px; width:252px;"><b>Subtitle reflow</b>Baseline animates 196&nbsp;px → 96&nbsp;px alongside the fade so text never jumps after the bar is already gone.</div>
+    <div class="lead" style="left:1330px; top:894px; width:186px;"></div><div class="dot" style="left:1326px; top:891.5px;"></div>
+    <div class="leadv" style="left:1516px; top:610px; height:284px;"></div>
+  </div>
+  </sc-if>
+
+  <!-- state variant: buffering -->
+  <div style="position:absolute; left:1524px; top:706px; width:252px; display:flex; flex-direction:column; gap:9px;">
+    <div class="mono" style="font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#a9641c; font-weight:600;">State variant · buffering</div>
+    <div style="position:relative; width:252px; height:142px; border-radius:6px; overflow:hidden; background:#0a0a09; border:1px solid #d6cfc2;">
+      <div class="hatch" style="position:absolute; inset:0; opacity:.5;"></div>
+      <div style="position:absolute; inset:0; background:rgba(6,6,5,.5);"></div>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px;">
+        <svg width="30" height="30" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="14" stroke="rgba(255,255,255,.16)" stroke-width="2.6"/><path d="M18 4a14 14 0 0 1 12.1 7" stroke="{{accent}}" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <div class="mono" style="font-size:9.5px; color:#cfc8bb; letter-spacing:.04em;">Buffering 34% · 2.1 MB/s</div>
+      </div>
+      <div style="position:absolute; left:14px; right:14px; bottom:12px; height:5px; border-radius:3px; background:rgba(255,255,255,.13);">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:34%; border-radius:3px; background:rgba(255,255,255,.28);"></div>
+        <div style="position:absolute; left:0; top:0; bottom:0; width:11%; border-radius:3px; background:{{accent}};"></div>
+      </div>
+    </div>
+    <div class="ann" style="width:252px;">Chrome is forced visible and the buffered range keeps animating, so the user can see the stall is being worked on rather than guess.</div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e0a34a","options":["#e0a34a","#5aa9e6","#7fb069","#e0654a"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#e0a34a', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:800px; height:520px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; flex-direction:column; gap:4px;">
+    <div class="sheettitle">Mini player</div>
+    <div class="sheetmeta">C1 · 420 × 236 · always on top</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:420px; height:236px; border-radius:9px; overflow:hidden; background:#0a0a09; box-shadow:0 14px 36px rgba(30,26,20,.24), 0 2px 6px rgba(30,26,20,.12);">
+    <div class="hatch" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+      <div style="position:relative; width:96px; height:54px; border:1px solid rgba(255,255,255,.10);">
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom right, transparent calc(50% - .5px), rgba(255,255,255,.08) 50%, transparent calc(50% + .5px));"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom left, transparent calc(50% - .5px), rgba(255,255,255,.08) 50%, transparent calc(50% + .5px));"></div>
+      </div>
+    </div>
+
+    <div style="position:absolute; left:0; top:0; right:0; height:40px; background:linear-gradient(to bottom, rgba(0,0,0,.62), rgba(0,0,0,0)); display:flex; align-items:center; justify-content:space-between; padding:0 10px;">
+      <div style="font-size:10.5px; color:#ddd7cb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:250px;">Sintel — 2010</div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8 7l4-4 4 4"/><path d="M5 15.5h14v3H5z"/><path d="M12 18.5V21"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbc4b7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 4.5h-7v7"/><path d="M20.5 4.5L13.5 11.5"/><path d="M3.5 19.5h7v-7"/><path d="M3.5 19.5l7-7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#cbc4b7" stroke-width="1.4"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+
+    <div style="position:absolute; left:0; right:0; bottom:0; height:66px; background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0)); display:flex; flex-direction:column; justify-content:flex-end; gap:9px; padding:0 12px 11px;">
+      <div style="display:flex; align-items:center; justify-content:center; gap:22px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e2ddd2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5V2.6L6.8 5.9 11 9.2V6.3"/><path d="M11 5.5a7.2 7.2 0 1 1-7 5.6"/><text x="12" y="15.6" font-size="6.4" fill="#e2ddd2" stroke="none" text-anchor="middle" font-family="IBM Plex Mono, monospace">10</text></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#f7f4ee"><rect x="6.5" y="4.5" width="4" height="15" rx="1"/><rect x="13.5" y="4.5" width="4" height="15" rx="1"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e2ddd2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5.5V2.6L17.2 5.9 13 9.2V6.3"/><path d="M13 5.5a7.2 7.2 0 1 0 7 5.6"/><text x="12" y="15.6" font-size="6.4" fill="#e2ddd2" stroke="none" text-anchor="middle" font-family="IBM Plex Mono, monospace">10</text></svg>
+      </div>
+      <div style="position:relative; height:4px; border-radius:2px; background:rgba(255,255,255,.16);">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:63%; border-radius:2px; background:rgba(255,255,255,.26);"></div>
+        <div style="position:absolute; left:0; top:0; bottom:0; width:44.5%; border-radius:2px; background:{{accent}};"></div>
+        <div style="position:absolute; left:44.5%; top:50%; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:#fff;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:340px; width:420px;">
+    Three transport controls and a bar. Everything else lives in the full window — a 420&nbsp;px frame that tries to keep the settings panel is a worse full window, not a mini one.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:500px; top:96px; width:260px;"><b>Pin &amp; restore</b>Pin toggles always-on-top; the diagonal arrows return to the full window at the exact same playback position. Close stops playback outright.</div>
+    <div class="lead" style="left:400px; top:106px; width:92px;"></div><div class="dot" style="left:396px; top:103.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:500px; top:212px; width:260px;"><b>Window behaviour</b>Aspect locked to the stream; resize from any edge scales the whole frame. Drag anywhere on the picture to move — the frame has no title bar to grab.</div>
+
+    <div class="ann" style="position:absolute; left:500px; top:330px; width:260px;"><b>Chrome</b>Both scrims are hover-only and fade at 1.2&nbsp;s — faster than the full window, because the frame is small enough that chrome eats a real share of it.</div>
+    <div class="lead" style="left:400px; top:340px; width:92px;"></div><div class="dot" style="left:396px; top:337.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:500px; top:444px; width:260px;"><b>Same surface</b>This is the same wgpu widget at a different size, not a second render path — one shader, one decode pipeline, one set of colour rules.</div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e0a34a","options":["#e0a34a","#5aa9e6","#7fb069","#e0654a"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#e0a34a', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

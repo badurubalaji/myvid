@@ -1,0 +1,31 @@
+[package]
+name = "myvid"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+description = "A cross-platform video player — GStreamer decode, wgpu presentation, iced UI"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+iced = { version = "0.14", default-features = false, features = ["wgpu", "advanced", "tokio", "wayland", "x11", "canvas"] }
+wgpu = "27"
+bytemuck = { version = "1", features = ["derive"] }
+
+gstreamer = "0.25"
+gstreamer-app = "0.25"
+gstreamer-video = "0.25"
+
+anyhow = "1"
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
+
+# Small binary, no debug bloat. `cargo clean` after install reclaims target/.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# No unwinding tables. Unwinding across GStreamer's C callbacks is undefined
+# anyway, so a panic there already ends the process — this just stops us paying
+# to carry the machinery. Note: `cargo test --release` cannot build with this.
+panic = "abort"
+strip = "symbols"
+incremental = false

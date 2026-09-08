@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1800px; height:1060px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Clip &amp; record</div>
+    <div class="sheetmeta">C4 · in/out selection · stream copy</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:1440px; height:900px; border-radius:10px; overflow:hidden; background:#0a0a09; box-shadow:0 18px 50px rgba(30,26,20,.20), 0 2px 6px rgba(30,26,20,.10);">
+
+    <div class="hatch" style="position:absolute; inset:0;"></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.30);"></div>
+
+    <!-- title bar -->
+    <div style="position:absolute; left:0; top:0; right:0; height:110px; background:linear-gradient(to bottom, rgba(0,0,0,.62), rgba(0,0,0,0));"></div>
+    <div style="position:absolute; left:0; top:0; right:0; height:46px; display:flex; align-items:center; justify-content:space-between; padding:0 18px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="mono" style="font-size:11px; font-weight:600; letter-spacing:.16em; color:{{accent}}; text-transform:uppercase;">myvid</div>
+        <div style="width:1px; height:13px; background:rgba(255,255,255,.16);"></div>
+        <div style="font-size:12.5px; color:#ded8cd; font-weight:500;">Tears of Steel — 2012</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:20px;">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#a49d90" stroke-width="1.3"><path d="M1 7h12"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#a49d90" stroke-width="1.3"><rect x="1.5" y="1.5" width="11" height="11"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#a49d90" stroke-width="1.3"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+
+    <!-- live recording chip -->
+    <div style="position:absolute; left:22px; top:62px; display:flex; align-items:center; gap:11px; padding:8px 13px; border-radius:9px; background:rgba(24,22,19,.88); border:1px solid rgba(214,72,58,.42); box-shadow:0 6px 22px rgba(0,0,0,.4);">
+      <div style="width:9px; height:9px; border-radius:50%; background:#d6483a; box-shadow:0 0 0 4px rgba(214,72,58,.20);"></div>
+      <div class="mono" style="font-size:11px; color:#f0ece2; font-weight:500; letter-spacing:.03em;">REC 00:04:12</div>
+      <div style="width:1px; height:12px; background:rgba(255,255,255,.14);"></div>
+      <div class="mono" style="font-size:10.5px; color:#8d8779;">184 MB · ~/Videos/capture-2026-09-07.mkv</div>
+      <div style="width:1px; height:12px; background:rgba(255,255,255,.14);"></div>
+      <div class="mono" style="font-size:10.5px; color:#d6483a; font-weight:500;">Stop</div>
+    </div>
+
+    <!-- control bar, clip mode -->
+    <div style="position:absolute; left:32px; right:32px; bottom:26px; border-radius:18px; background:rgba(19,18,16,.64); backdrop-filter:blur(30px) saturate(1.3); border:1px solid rgba(255,255,255,.085); box-shadow:0 10px 40px rgba(0,0,0,.45); padding:18px 22px 16px; display:flex; flex-direction:column; gap:15px;">
+
+      <!-- scrub with selection -->
+      <div style="position:relative; height:11px; margin:0 2px;">
+        <div style="position:absolute; left:0; right:0; top:2px; height:7px; border-radius:4px; background:rgba(255,255,255,.13);"></div>
+        <div style="position:absolute; left:0; top:2px; height:7px; width:63%; border-radius:4px; background:rgba(255,255,255,.20);"></div>
+        <div style="position:absolute; left:0; top:2px; height:7px; width:44.5%; border-radius:4px; background:rgba(255,255,255,.34);"></div>
+        <div style="position:absolute; left:44.5%; top:-3px; width:17.5%; height:17px; border-top:1px solid {{accent}}; border-bottom:1px solid {{accent}};"><div style="position:absolute; inset:0; background:{{accent}}; opacity:.30;"></div></div>
+        <div style="position:absolute; left:44.5%; top:-5px; width:4px; height:21px; margin-left:-2px; border-radius:2px; background:{{accent}};"></div>
+        <div style="position:absolute; left:62%; top:-5px; width:4px; height:21px; margin-left:-2px; border-radius:2px; background:{{accent}};"></div>
+        <div style="position:absolute; left:44.5%; top:-22px; transform:translateX(-50%);"><div class="mono" style="font-size:9px; letter-spacing:.1em; color:{{accent}};">IN</div></div>
+        <div style="position:absolute; left:62%; top:-22px; transform:translateX(-50%);"><div class="mono" style="font-size:9px; letter-spacing:.1em; color:{{accent}};">OUT</div></div>
+        <div style="position:absolute; left:53%; top:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:#ffffff; box-shadow:0 1px 5px rgba(0,0,0,.6);"></div>
+      </div>
+
+      <!-- transport -->
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.10); display:flex; align-items:center; justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#f7f4ee"><rect x="6.5" y="4.5" width="4" height="15" rx="1"/><rect x="13.5" y="4.5" width="4" height="15" rx="1"/></svg>
+          </div>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.7" stroke-linecap="round"><path d="M8.5 6.5L4 12l4.5 5.5"/><path d="M4 12h12"/><path d="M20 5.5v13"/></svg>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.7" stroke-linecap="round"><path d="M15.5 6.5L20 12l-4.5 5.5"/><path d="M20 12H8"/><path d="M4 5.5v13"/></svg>
+          <div class="mono" style="font-size:11.5px; margin-left:8px;"><span style="color:#f1eee8;">01:14:38</span><span style="color:#6d685e;"> / 02:43:31</span></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:20px;">
+          <div class="mono" style="font-size:11.5px; color:#ddd7cb; font-weight:500;">1.0&times;</div>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.5"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M7.5 12.4h3M13.5 12.4h3" stroke-linecap="round"/></svg>
+          <div style="width:30px; height:30px; margin:-5px; border-radius:8px; background:rgba(224,163,74,.18); border:1px solid rgba(224,163,74,.35); display:flex; align-items:center; justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8.3 8L20 18M8.3 16L20 6"/></svg>
+          </div>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ddd7cb" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/></svg>
+        </div>
+      </div>
+
+      <!-- clip row -->
+      <div style="border-top:1px solid rgba(255,255,255,.075); padding-top:15px; display:flex; align-items:center; justify-content:space-between; gap:26px;">
+
+        <div style="display:flex; align-items:center; gap:20px;">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div class="mono" style="font-size:8.5px; letter-spacing:.13em; text-transform:uppercase; color:#6d685e;">In</div>
+            <div class="mono" style="font-size:12.5px; color:#f1eee8;">01:12:44.208</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div class="mono" style="font-size:8.5px; letter-spacing:.13em; text-transform:uppercase; color:#6d685e;">Out</div>
+            <div class="mono" style="font-size:12.5px; color:#f1eee8;">01:16:56.375</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div class="mono" style="font-size:8.5px; letter-spacing:.13em; text-transform:uppercase; color:#6d685e;">Duration</div>
+            <div class="mono" style="font-size:12.5px; color:{{accent}}; font-weight:500;">00:04:12.167</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:7px; margin-left:6px;">
+            <div style="display:flex; align-items:center; gap:7px; padding:6px 11px; border-radius:7px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);">
+              <span style="font-size:11.5px; color:#ddd7cb;">Set in</span><span class="kbd">I</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:7px; padding:6px 11px; border-radius:7px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);">
+              <span style="font-size:11.5px; color:#ddd7cb;">Set out</span><span class="kbd">O</span>
+            </div>
+            <div style="padding:6px 11px; border-radius:7px;">
+              <span style="font-size:11.5px; color:#7b756a;">Clear</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="display:flex; flex-direction:column; gap:5px;">
+            <div class="mono" style="font-size:8.5px; letter-spacing:.13em; text-transform:uppercase; color:#6d685e;">Output</div>
+            <div style="display:flex; gap:5px;">
+              <div class="mono" style="font-size:10.5px; color:#100f0d; font-weight:600; padding:5px 10px; border-radius:6px; background:{{accent}};">MKV copy</div>
+              <div class="mono" style="font-size:10.5px; color:#b6afa2; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,.06);">MP4 copy</div>
+              <div class="mono" style="font-size:10.5px; color:#b6afa2; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,.06);">MP4 re-encode</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 18px; border-radius:9px; background:{{accent}};">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#14120f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v12"/><path d="M7.8 11.3L12 15.5l4.2-4.2"/><path d="M4 17v2.5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V17"/></svg>
+            <span style="font-size:12.5px; font-weight:600; color:#14120f;">Export clip</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mono" style="font-size:10px; color:#6d685e; letter-spacing:.02em;">
+        Stream copy — no re-encode, no quality loss. Cut lands on the nearest keyframe before <span style="color:#8d8779;">In</span> (−0.83&nbsp;s) unless re-encode is chosen.
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:1006px; width:1240px;">
+    Two different jobs on one screen: the chip records a live stream as it arrives; the in/out selection cuts a range out of what is already on disk.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1524px; top:110px; width:252px;"><b>Live capture chip</b>Only appears while a network source is being written to disk. Shows elapsed, bytes and the destination path — nothing records without saying where.</div>
+    <div class="lead" style="left:1420px; top:180px; width:96px;"></div><div class="dot" style="left:1416px; top:177.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:266px; width:252px;"><b>Selection region</b>Both handles drag; the playhead moves independently inside the region so you can review the cut without disturbing it. Shift-drag moves the whole region.</div>
+    <div class="lead" style="left:1420px; top:788px; width:96px;"></div><div class="dot" style="left:1416px; top:785.5px;"></div>
+    <div class="leadv" style="left:1516px; top:276px; height:512px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:440px; width:252px;"><b>Keyframe honesty</b>A stream copy cannot cut mid-GOP, so the panel states the real offset rather than silently shifting the in point. Re-encode is offered for a frame-exact cut.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:604px; width:252px;"><b>Pipeline</b>A <span style="color:#4d4840;">tee</span> after the demuxer feeds <span style="color:#4d4840;">queue → matroskamux → filesink</span>. The decode and display branch is untouched, so playback never stutters while exporting.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:772px; width:252px;"><b>Trust boundary</b>Export runs in the same sandboxed child as decode, writing through a single pre-opened file descriptor — the media process never gains a path of its own choosing.</div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e0a34a","options":["#e0a34a","#5aa9e6","#7fb069","#e0654a"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#e0a34a', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

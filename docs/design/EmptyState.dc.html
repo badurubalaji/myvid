@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1800px; height:1060px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Empty state</div>
+    <div class="sheetmeta">C3 · nothing loaded · drop target &amp; recents</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:1440px; height:900px; border-radius:10px; overflow:hidden; background:#100f0d; box-shadow:0 18px 50px rgba(30,26,20,.20), 0 2px 6px rgba(30,26,20,.10); display:flex; flex-direction:column;">
+
+    <div style="height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid rgba(255,255,255,.05);">
+      <div class="mono" style="font-size:11px; font-weight:600; letter-spacing:.16em; color:{{accent}}; text-transform:uppercase;">myvid</div>
+      <div style="display:flex; align-items:center; gap:20px;">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#6e6960" stroke-width="1.3"><path d="M1 7h12"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#6e6960" stroke-width="1.3"><rect x="1.5" y="1.5" width="11" height="11"/></svg>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#6e6960" stroke-width="1.3"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+
+    <div style="flex-grow:1; display:flex; flex-direction:column; padding:34px 48px 26px; gap:30px; min-height:0;">
+
+      <!-- drop target -->
+      <div style="height:228px; flex-shrink:0; border:1.5px dashed rgba(255,255,255,.16); border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:19px;">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#4f4a42" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4.5"/><path d="M7.8 8.7L12 4.5l4.2 4.2"/><path d="M3.5 15v3.5a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:7px;">
+          <div style="font-size:18px; color:#e5e0d5; font-weight:500;">Drop a video here</div>
+          <div class="mono" style="font-size:11px; color:#6e6960;">or a folder, or a stream URL</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:11px;">
+          <div style="display:flex; align-items:center; gap:9px; padding:9px 16px; border-radius:8px; background:{{accent}};">
+            <span style="font-size:12.5px; font-weight:600; color:#14120f;">Open file</span>
+            <span class="mono" style="font-size:10px; color:rgba(20,18,15,.6);">Ctrl O</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; padding:9px 16px; border-radius:8px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.09);">
+            <span style="font-size:12.5px; font-weight:500; color:#ddd7cb;">Open URL</span>
+            <span class="mono" style="font-size:10px; color:#6e6960;">Ctrl L</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- recents -->
+      <div style="flex-shrink:0; display:flex; flex-direction:column; gap:13px;">
+        <div class="mono" style="font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:#6e6960;">Continue watching</div>
+        <div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:16px;">
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="hatch" style="position:relative; height:106px; border-radius:7px; overflow:hidden; border:1px solid rgba(255,255,255,.07);">
+              <div style="position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,.13);"><div style="width:44%; height:3px; background:{{accent}};"></div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="font-size:11.5px; color:#ddd7cb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Sintel</div>
+              <div class="mono" style="font-size:9.5px; color:#6e6960;">resume 01:12:44</div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="hatch" style="position:relative; height:106px; border-radius:7px; overflow:hidden; border:1px solid rgba(255,255,255,.07);">
+              <div style="position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,.13);"><div style="width:78%; height:3px; background:{{accent}};"></div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="font-size:11.5px; color:#ddd7cb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Tears of Steel</div>
+              <div class="mono" style="font-size:9.5px; color:#6e6960;">resume 00:09:31</div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="hatch" style="position:relative; height:106px; border-radius:7px; overflow:hidden; border:1px solid rgba(255,255,255,.07);">
+              <div style="position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,.13);"><div style="width:12%; height:3px; background:{{accent}};"></div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="font-size:11.5px; color:#ddd7cb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Cosmos Laundromat</div>
+              <div class="mono" style="font-size:9.5px; color:#6e6960;">resume 00:01:28</div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="hatch" style="position:relative; height:106px; border-radius:7px; overflow:hidden; border:1px solid rgba(255,255,255,.07);"></div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="font-size:11.5px; color:#ddd7cb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Spring</div>
+              <div class="mono" style="font-size:9.5px; color:#6e6960;">finished · 07:47</div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="hatch" style="position:relative; height:106px; border-radius:7px; overflow:hidden; border:1px solid rgba(255,255,255,.07); opacity:.42;"></div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="font-size:11.5px; color:#807a70; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Caminandes 3</div>
+              <div class="mono" style="font-size:9.5px; color:#57524a;">drive not mounted</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- shortcuts -->
+      <div style="flex-grow:1; display:flex; flex-direction:column; gap:13px; min-height:0;">
+        <div class="mono" style="font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:#6e6960;">Keyboard</div>
+        <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:9px 34px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">Space</span><span style="font-size:11.5px; color:#8d8779;">Play / pause</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">, .</span><span style="font-size:11.5px; color:#8d8779;">Frame step</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">M</span><span style="font-size:11.5px; color:#8d8779;">Mute</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">V</span><span style="font-size:11.5px; color:#8d8779;">Cycle subtitle track</span></div>
+
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">&larr; &rarr;</span><span style="font-size:11.5px; color:#8d8779;">Seek &plusmn; 5 s</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">F</span><span style="font-size:11.5px; color:#8d8779;">Fullscreen</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">&uarr; &darr;</span><span style="font-size:11.5px; color:#8d8779;">Volume &plusmn; 5%</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">B</span><span style="font-size:11.5px; color:#8d8779;">Cycle audio track</span></div>
+
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">J L</span><span style="font-size:11.5px; color:#8d8779;">Seek &plusmn; 10 s</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">P</span><span style="font-size:11.5px; color:#8d8779;">Mini player</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">[ ]</span><span style="font-size:11.5px; color:#8d8779;">Speed &minus;/&plus; 0.25&times;</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span class="kbd">I O</span><span style="font-size:11.5px; color:#8d8779;">Set clip in / out</span></div>
+        </div>
+      </div>
+
+      <div style="flex-shrink:0; padding-top:16px; border-top:1px solid rgba(255,255,255,.055); display:flex; align-items:center; justify-content:space-between; gap:24px;">
+        <div class="mono" style="font-size:10px; color:#57524a; line-height:1.7;">
+          MKV · MP4 · WebM · AVI · MOV · TS · M2TS · FLV · OGV · WMV &nbsp;&nbsp;—&nbsp;&nbsp; H.264 · HEVC · AV1 · VP9 · VP8 · MPEG-2 · MPEG-4 · ProRes · Theora · VC-1
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <div style="width:5px; height:5px; border-radius:50%; background:#7fb069;"></div>
+          <div class="mono" style="font-size:10px; color:#6e6960;">VA-API ready · iHD · Iris Xe</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:1006px; width:1240px;">
+    The window with no file open is the one place a shortcut list belongs — it is the only moment the user has nothing else to look at.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1524px; top:110px; width:252px;"><b>Drop target</b>Accepts files, folders and a dragged URL. Border and label switch to accent on drag-over; a rejected type says which extension it was, not &ldquo;unsupported&rdquo;.</div>
+    <div class="lead" style="left:1420px; top:264px; width:96px;"></div><div class="dot" style="left:1416px; top:261.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:266px; width:252px;"><b>Resume positions</b>Stored per file by content hash of the first and last 1&nbsp;MiB plus size — survives a rename or a move, and never needs a library scan.</div>
+    <div class="lead" style="left:1420px; top:520px; width:96px;"></div><div class="dot" style="left:1416px; top:517.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:440px; width:252px;"><b>Unavailable entries</b>Kept in the list at 42% with the reason stated. A recent file that vanishes because a drive is unmounted should not look like one you never opened.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:610px; width:252px;"><b>Thumbnails</b>Generated on first play and cached to disk, not on first sight of the file — opening the app must not decode five videos.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:742px; width:252px;"><b>Accelerator status</b>Probed once at startup. Amber here would tell the user, before they open anything, that every file today will decode on the CPU.</div>
+    <div class="lead" style="left:1420px; top:952px; width:96px;"></div><div class="dot" style="left:1416px; top:949.5px;"></div>
+    <div class="leadv" style="left:1516px; top:752px; height:200px;"></div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e0a34a","options":["#e0a34a","#5aa9e6","#7fb069","#e0654a"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#e0a34a', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

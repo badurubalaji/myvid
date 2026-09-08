@@ -1,0 +1,7 @@
+/target
+# Test media — large, and not ours to redistribute
+/docs/videos/
+.install.lock
+# Generated design canvas: 2.6 MB of vendored editor code, rebuilt from the
+# .dc.html artboards and canvas.json by the design tooling.
+/docs/design/myvid-player-wireframes.html

@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1800px; height:1060px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Classic — Desktop</div>
+    <div class="sheetmeta">B1 · menu bar · docked strip · status bar</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:1440px; height:900px; border-radius:7px; overflow:hidden; background:#e4e1da; border:1px solid #bdb7ab; box-shadow:0 18px 50px rgba(30,26,20,.20), 0 2px 6px rgba(30,26,20,.10); display:flex; flex-direction:column;">
+
+    <!-- title bar -->
+    <div style="height:31px; background:#dcd8d0; border-bottom:1px solid #c8c2b6; display:flex; align-items:center; justify-content:space-between; padding:0 11px; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <div style="width:13px; height:13px; border-radius:3px; background:{{accent}};"></div>
+        <div style="font-size:11.5px; color:#3b362e; font-weight:500;">Sintel (2010) — myvid</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:17px;">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#6d675e" stroke-width="1.3"><path d="M1 7h12"/></svg>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#6d675e" stroke-width="1.3"><rect x="1.5" y="1.5" width="11" height="11"/></svg>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#6d675e" stroke-width="1.3"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+
+    <!-- menu bar -->
+    <div style="height:27px; background:#e4e1da; border-bottom:1px solid #cec8bc; display:flex; align-items:center; gap:2px; padding:0 6px; flex-shrink:0;">
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px; border-radius:3px; background:#d2ccc0;">Media</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Playback</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Audio</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Video</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Subtitle</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Tools</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">View</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Help</div>
+    </div>
+
+    <!-- video -->
+    <div class="hatch" style="flex-grow:1; position:relative; display:flex; align-items:center; justify-content:center;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:13px;">
+        <div style="position:relative; width:240px; height:135px; border:1px solid rgba(255,255,255,.11);">
+          <div style="position:absolute; inset:0; background:linear-gradient(to bottom right, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+          <div style="position:absolute; inset:0; background:linear-gradient(to bottom left, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+        </div>
+        <div class="mono" style="font-size:10px; letter-spacing:.13em; color:#565149; text-transform:uppercase;">video surface</div>
+      </div>
+      <div style="position:absolute; left:0; right:0; bottom:34px; display:flex; justify-content:center;">
+        <div style="font-size:21px; font-weight:500; color:#fff; text-align:center; line-height:1.35; text-shadow:0 0 5px rgba(0,0,0,.95), 0 2px 9px rgba(0,0,0,.85);">
+          It seems that you have some kind of a curse upon you.
+        </div>
+      </div>
+    </div>
+
+    <!-- docked control strip -->
+    <div style="flex-shrink:0; background:#e4e1da; border-top:1px solid #cec8bc; padding:9px 12px 10px; display:flex; flex-direction:column; gap:9px;">
+
+      <div style="display:flex; align-items:center; gap:11px;">
+        <div class="mono" style="font-size:10.5px; color:#4d483f; width:58px;">01:12:44</div>
+        <div style="position:relative; flex-grow:1; height:9px; border-radius:2px; background:#cdc7ba; border:1px solid #bcb5a7; box-shadow:inset 0 1px 2px rgba(0,0,0,.09);">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:63%; background:#b8b1a3;"></div>
+          <div style="position:absolute; left:0; top:0; bottom:0; width:44.5%; background:{{accent}};"></div>
+          <div style="position:absolute; left:44.5%; top:-3px; width:9px; height:13px; margin-left:-4.5px; border-radius:2px; background:#f6f4ef; border:1px solid #96907f; box-shadow:0 1px 2px rgba(0,0,0,.18);"></div>
+        </div>
+        <div class="mono" style="font-size:10.5px; color:#7d776c; width:58px; text-align:right;">-01:30:47</div>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <div style="width:32px; height:32px; border-radius:4px; background:linear-gradient(#f7f5f0,#e5e1d8); border:1px solid #bcb5a7; display:flex; align-items:center; justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3b362e"><path d="M18 5v14l-10-7z"/><rect x="5" y="5" width="2.6" height="14"/></svg>
+          </div>
+          <div style="width:40px; height:32px; border-radius:4px; background:linear-gradient(#fbf9f5,#eae6dd); border:1px solid #a8a193; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 0 rgba(255,255,255,.7) inset;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#25211c"><rect x="6.5" y="4.5" width="4" height="15" rx="0.5"/><rect x="13.5" y="4.5" width="4" height="15" rx="0.5"/></svg>
+          </div>
+          <div style="width:32px; height:32px; border-radius:4px; background:linear-gradient(#f7f5f0,#e5e1d8); border:1px solid #bcb5a7; display:flex; align-items:center; justify-content:center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#3b362e"><rect x="5" y="5" width="14" height="14" rx="1"/></svg>
+          </div>
+          <div style="width:32px; height:32px; border-radius:4px; background:linear-gradient(#f7f5f0,#e5e1d8); border:1px solid #bcb5a7; display:flex; align-items:center; justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3b362e"><path d="M6 5v14l10-7z"/><rect x="16.4" y="5" width="2.6" height="14"/></svg>
+          </div>
+
+          <div style="width:1px; height:22px; background:#c8c2b6; margin:0 7px;"></div>
+
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 0 6h-2"/><path d="M7 5.5L4 8l3 2.5"/><path d="M20 16H7a3 3 0 0 1 0-6h2"/><path d="M17 18.5l3-2.5-3-2.5"/></svg>
+          </div>
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5h3l11 11h3M3.5 17.5h3l11-11h3"/><path d="M17.5 3.5l3 3-3 3M17.5 14.5l3 3-3 3"/></svg>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:5px;">
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h11"/></svg>
+          </div>
+          <div style="width:30px; height:30px; border-radius:4px; background:#d2ccc0; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3b362e" stroke-width="1.5"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M7.5 12.4h3M13.5 12.4h3" stroke-linecap="round"/></svg>
+          </div>
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.6" stroke-linecap="round"><path d="M4 8h8M4 12h8M4 16h5"/><path d="M16 7.5v9M19 5.5v13"/></svg>
+          </div>
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/></svg>
+          </div>
+
+          <div style="width:1px; height:22px; background:#c8c2b6; margin:0 7px;"></div>
+
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.4L12 5.5v13L7.4 14.5H4z"/><path d="M16 9.4a4 4 0 0 1 0 5.2"/><path d="M18.6 7a7.6 7.6 0 0 1 0 10"/></svg>
+          <div style="position:relative; width:90px; height:7px; border-radius:2px; background:#cdc7ba; border:1px solid #bcb5a7;">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:72%; background:{{accent}};"></div>
+            <div style="position:absolute; left:72%; top:-3px; width:8px; height:11px; margin-left:-4px; border-radius:2px; background:#f6f4ef; border:1px solid #96907f;"></div>
+          </div>
+          <div class="mono" style="font-size:10.5px; color:#4d483f; width:32px; text-align:right;">72%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- status bar -->
+    <div style="height:25px; flex-shrink:0; background:#dcd8d0; border-top:1px solid #c8c2b6; display:flex; align-items:center; justify-content:space-between; padding:0 11px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:5px; height:5px; border-radius:50%; background:#5f8f4a;"></div>
+        <div class="mono" style="font-size:10px; color:#4d483f;">Playing</div>
+        <div class="mono" style="font-size:10px; color:#8b8478;">/media/films/Sintel.2010.2160p.HEVC.mkv</div>
+      </div>
+      <div class="mono" style="font-size:10px; color:#6d675e; display:flex; gap:14px;">
+        <span>HEVC Main10@L5.1</span><span>3840×1608</span><span>23.976 fps</span><span>18.4 Mb/s</span><span>E-AC-3 5.1 640 kb/s</span><span style="color:#4d7a3a;">VA-API</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:1006px; width:1240px;">
+    Nothing overlays the picture. Every control has a permanent home, so muscle memory works and the window never hides something you were reading.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1524px; top:110px; width:252px;"><b>Menu bar</b>Full command surface, every entry showing its accelerator. This is the direction&#39;s whole argument: discoverability without a search box.</div>
+    <div class="lead" style="left:1420px; top:196px; width:96px;"></div><div class="dot" style="left:1416px; top:193.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:250px; width:252px;"><b>Letterbox fill</b>Bars are the surface&#39;s own background, painted by the shader clear colour — not drawn widgets. Keeps aspect handling in one place.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:394px; width:252px;"><b>Elapsed / remaining</b>Both ends labelled. Click either to toggle between remaining and total — the one thing everyone reaches for and nobody can find.</div>
+    <div class="lead" style="left:1420px; top:838px; width:96px;"></div><div class="dot" style="left:1416px; top:835.5px;"></div>
+    <div class="leadv" style="left:1516px; top:404px; height:434px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:544px; width:252px;"><b>Tactile buttons</b>32&nbsp;px, 1&nbsp;px border, one-stop gradient, pressed state inverts it. Play/pause is 40&nbsp;px and darker-bordered so the hand finds it without looking.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:700px; width:252px;"><b>Status bar</b>Live from pad caps and stream tags, not from the filename. The accelerator flag turns amber the moment playback falls back to software decode.</div>
+    <div class="lead" style="left:1420px; top:966px; width:96px;"></div><div class="dot" style="left:1416px; top:963.5px;"></div>
+    <div class="leadv" style="left:1516px; top:710px; height:256px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:856px; width:252px;"><b>Keyboard</b>Every control is tab-reachable with a visible focus ring; menu accelerators work with the menu closed. No pointer-only actions anywhere.</div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#b06a1e","options":["#b06a1e","#2f6ea8","#4d7a3a","#a63d2f"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#b06a1e', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",            "x": 0,    "y": 0,    "w": 1800, "h": 1060, "title": "A1 · Modern — Playing" },
+    { "file": "ModernImmersive.dc.html", "x": 1900, "y": 0,    "w": 1800, "h": 1060, "title": "A2 · Modern — Immersive" },
+    { "file": "ModernScrub.dc.html",     "x": 3800, "y": 0,    "w": 1800, "h": 1060, "title": "A3 · Modern — Scrub preview" },
+    { "file": "ModernPanel.dc.html",     "x": 5700, "y": 0,    "w": 1800, "h": 1060, "title": "A4 · Modern — Tracks & video" },
+
+    { "file": "ClassicDesktop.dc.html",  "x": 0,    "y": 1360, "w": 1800, "h": 1060, "title": "B1 · Classic — Desktop" },
+    { "file": "ClassicPlaylist.dc.html", "x": 1900, "y": 1360, "w": 1800, "h": 1060, "title": "B2 · Classic — Playlist" },
+
+    { "file": "MiniPlayer.dc.html",      "x": 0,    "y": 2720, "w": 800,  "h": 520,  "title": "C1 · Mini player" },
+    { "file": "Tablet.dc.html",          "x": 900,  "y": 2720, "w": 1384, "h": 928,  "title": "C2 · Touch / narrow" },
+    { "file": "EmptyState.dc.html",      "x": 2384, "y": 2720, "w": 1800, "h": 1060, "title": "C3 · Empty state" },
+    { "file": "ClipRecord.dc.html",      "x": 4284, "y": 2720, "w": 1800, "h": 1060, "title": "C4 · Clip & record" }
+  ],
+  "annotations": [
+    {
+      "id": "row-modern",
+      "x": 0, "y": -190, "w": 780,
+      "text": "DIRECTION A — MODERN\nOne floating glass surface over an edge-to-edge frame. Chrome fades at 2.4 s and the picture is never permanently cropped by UI. Everything the user sets rarely lives in one overlay panel; everything they touch constantly sits in the bar.\nBest at: fullscreen viewing, single-file playback, looking like nothing else."
+    },
+    {
+      "id": "row-states",
+      "x": 0, "y": 2520, "w": 780,
+      "text": "RESPONSIVE & STATES\nSame window, same wgpu surface, different widget tree below 1100 px. Mini player, touch layout, the no-file state and the clip/record mode — the four screens that decide whether the player feels finished or like a demo."
+    },
+    {
+      "id": "row-classic",
+      "x": 0, "y": 1160, "w": 780,
+      "text": "DIRECTION B — CLASSIC\nThe VLC / MPC-HC lineage, done carefully. Menu bar, docked strip, live status readout, dockable playlist. Nothing overlays the picture and nothing disappears, so muscle memory and the keyboard both work.\nBest at: libraries and queues, auditing files, users who already know a player."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

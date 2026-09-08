@@ -1,0 +1,255 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1800px; height:1060px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Classic — Playlist docked</div>
+    <div class="sheetmeta">B2 · 330 px sidebar · resizable</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:1440px; height:900px; border-radius:7px; overflow:hidden; background:#e4e1da; border:1px solid #bdb7ab; box-shadow:0 18px 50px rgba(30,26,20,.20), 0 2px 6px rgba(30,26,20,.10); display:flex; flex-direction:column;">
+
+    <div style="height:31px; background:#dcd8d0; border-bottom:1px solid #c8c2b6; display:flex; align-items:center; justify-content:space-between; padding:0 11px; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <div style="width:13px; height:13px; border-radius:3px; background:{{accent}};"></div>
+        <div style="font-size:11.5px; color:#3b362e; font-weight:500;">Big Buck Bunny (2008) — myvid</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:17px;">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#6d675e" stroke-width="1.3"><path d="M1 7h12"/></svg>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#6d675e" stroke-width="1.3"><rect x="1.5" y="1.5" width="11" height="11"/></svg>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#6d675e" stroke-width="1.3"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+
+    <div style="height:27px; background:#e4e1da; border-bottom:1px solid #cec8bc; display:flex; align-items:center; gap:2px; padding:0 6px; flex-shrink:0;">
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Media</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Playback</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Audio</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Video</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Subtitle</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Tools</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px; border-radius:3px; background:#d2ccc0;">View</div>
+      <div style="font-size:11.5px; color:#2c2823; padding:4px 9px;">Help</div>
+    </div>
+
+    <div style="flex-grow:1; display:flex; min-height:0;">
+
+      <div class="hatch" style="flex-grow:1; position:relative; display:flex; align-items:center; justify-content:center;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:13px;">
+          <div style="position:relative; width:220px; height:124px; border:1px solid rgba(255,255,255,.11);">
+            <div style="position:absolute; inset:0; background:linear-gradient(to bottom right, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+            <div style="position:absolute; inset:0; background:linear-gradient(to bottom left, transparent calc(50% - .5px), rgba(255,255,255,.09) 50%, transparent calc(50% + .5px));"></div>
+          </div>
+          <div class="mono" style="font-size:10px; letter-spacing:.13em; color:#565149; text-transform:uppercase;">video surface</div>
+        </div>
+      </div>
+
+      <!-- splitter -->
+      <div style="width:5px; background:#d5cfc3; border-left:1px solid #c8c2b6; border-right:1px solid #c8c2b6; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+        <div style="width:1px; height:26px; background:#a9a294;"></div>
+      </div>
+
+      <!-- playlist -->
+      <div style="width:330px; flex-shrink:0; background:#eeebe4; display:flex; flex-direction:column; min-height:0;">
+
+        <div style="padding:10px 11px 9px; border-bottom:1px solid #d7d1c5; display:flex; flex-direction:column; gap:9px; flex-shrink:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:11.5px; font-weight:600; color:#2c2823;">Playlist</div>
+            <div class="mono" style="font-size:10px; color:#8b8478;">12 items · 4:21:09</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:7px; padding:5px 8px; background:#faf8f4; border:1px solid #c8c2b6; border-radius:3px;">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8b8478" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14" stroke-linecap="round"/></svg>
+            <div style="font-size:11px; color:#a29b8e;">Filter…</div>
+          </div>
+        </div>
+
+        <div style="flex-grow:1; display:flex; flex-direction:column; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:9px; padding:7px 11px; background:{{accent}}; border-left:3px solid #6d4111;">
+            <div class="mono" style="font-size:10px; color:rgba(255,255,255,.75); width:16px;">3</div>
+            <div style="flex-grow:1; display:flex; flex-direction:column; gap:1px; min-width:0;">
+              <div style="font-size:11.5px; color:#fff; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Big Buck Bunny (2008)</div>
+              <div class="mono" style="font-size:9.5px; color:rgba(255,255,255,.72);">MP4 · H.264 · 1080p</div>
+            </div>
+            <div class="mono" style="font-size:10px; color:rgba(255,255,255,.85);">09:56</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:9px; padding:7px 11px; border-left:3px solid transparent;">
+            <div class="mono" style="font-size:10px; color:#a29b8e; width:16px;">4</div>
+            <div style="flex-grow:1; display:flex; flex-direction:column; gap:1px; min-width:0;">
+              <div style="font-size:11.5px; color:#2c2823; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Tears of Steel (2012)</div>
+              <div class="mono" style="font-size:9.5px; color:#8b8478;">MKV · HEVC · 2160p</div>
+            </div>
+            <div class="mono" style="font-size:10px; color:#6d675e;">12:14</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:9px; padding:7px 11px; background:#e6e2da; border-left:3px solid transparent;">
+            <div class="mono" style="font-size:10px; color:#a29b8e; width:16px;">5</div>
+            <div style="flex-grow:1; display:flex; flex-direction:column; gap:1px; min-width:0;">
+              <div style="font-size:11.5px; color:#2c2823; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Cosmos Laundromat (2015)</div>
+              <div class="mono" style="font-size:9.5px; color:#8b8478;">WebM · VP9 · 1440p</div>
+            </div>
+            <div class="mono" style="font-size:10px; color:#6d675e;">12:14</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:9px; padding:7px 11px; border-left:3px solid transparent;">
+            <div class="mono" style="font-size:10px; color:#a29b8e; width:16px;">6</div>
+            <div style="flex-grow:1; display:flex; flex-direction:column; gap:1px; min-width:0;">
+              <div style="font-size:11.5px; color:#2c2823; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Spring (2019)</div>
+              <div class="mono" style="font-size:9.5px; color:#8b8478;">MKV · AV1 · 2160p</div>
+            </div>
+            <div class="mono" style="font-size:10px; color:#6d675e;">07:47</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:9px; padding:7px 11px; border-left:3px solid transparent;">
+            <div class="mono" style="font-size:10px; color:#a29b8e; width:16px;">7</div>
+            <div style="flex-grow:1; display:flex; flex-direction:column; gap:1px; min-width:0;">
+              <div style="font-size:11.5px; color:#a29b8e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Caminandes 3 — Llamigos</div>
+              <div class="mono" style="font-size:9.5px; color:#b6ada0;">missing — /mnt/archive unreachable</div>
+            </div>
+            <div class="mono" style="font-size:10px; color:#b6ada0;">02:30</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:9px; padding:7px 11px; border-left:3px solid transparent;">
+            <div class="mono" style="font-size:10px; color:#a29b8e; width:16px;">8</div>
+            <div style="flex-grow:1; display:flex; flex-direction:column; gap:1px; min-width:0;">
+              <div style="font-size:11.5px; color:#2c2823; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Agent 327 — Operation Barbershop</div>
+              <div class="mono" style="font-size:9.5px; color:#8b8478;">MOV · ProRes 422 · 1080p</div>
+            </div>
+            <div class="mono" style="font-size:10px; color:#6d675e;">03:51</div>
+          </div>
+        </div>
+
+        <div style="flex-shrink:0; border-top:1px solid #d7d1c5; padding:7px 9px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:3px;">
+            <div style="width:26px; height:24px; border-radius:3px; display:flex; align-items:center; justify-content:center; border:1px solid #c8c2b6; background:#faf8f4;">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#4d483f" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg>
+            </div>
+            <div style="width:26px; height:24px; border-radius:3px; display:flex; align-items:center; justify-content:center; border:1px solid #c8c2b6; background:#faf8f4;">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#4d483f" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 8h9"/></svg>
+            </div>
+          </div>
+          <div style="display:flex; gap:3px;">
+            <div style="width:26px; height:24px; border-radius:3px; display:flex; align-items:center; justify-content:center; background:#d2ccc0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2c2823" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 0 6h-2"/><path d="M7 5.5L4 8l3 2.5"/><path d="M20 16H7a3 3 0 0 1 0-6h2"/><path d="M17 18.5l3-2.5-3-2.5"/></svg>
+            </div>
+            <div style="width:26px; height:24px; border-radius:3px; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d776c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5h3l11 11h3M3.5 17.5h3l11-11h3"/><path d="M17.5 3.5l3 3-3 3M17.5 14.5l3 3-3 3"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-shrink:0; background:#e4e1da; border-top:1px solid #cec8bc; padding:9px 12px 10px; display:flex; flex-direction:column; gap:9px;">
+      <div style="display:flex; align-items:center; gap:11px;">
+        <div class="mono" style="font-size:10.5px; color:#4d483f; width:52px;">03:18</div>
+        <div style="position:relative; flex-grow:1; height:9px; border-radius:2px; background:#cdc7ba; border:1px solid #bcb5a7; box-shadow:inset 0 1px 2px rgba(0,0,0,.09);">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:41%; background:#b8b1a3;"></div>
+          <div style="position:absolute; left:0; top:0; bottom:0; width:33.2%; background:{{accent}};"></div>
+          <div style="position:absolute; left:33.2%; top:-3px; width:9px; height:13px; margin-left:-4.5px; border-radius:2px; background:#f6f4ef; border:1px solid #96907f;"></div>
+        </div>
+        <div class="mono" style="font-size:10.5px; color:#7d776c; width:52px; text-align:right;">-06:38</div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <div style="width:32px; height:32px; border-radius:4px; background:linear-gradient(#f7f5f0,#e5e1d8); border:1px solid #bcb5a7; display:flex; align-items:center; justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3b362e"><path d="M18 5v14l-10-7z"/><rect x="5" y="5" width="2.6" height="14"/></svg>
+          </div>
+          <div style="width:40px; height:32px; border-radius:4px; background:linear-gradient(#fbf9f5,#eae6dd); border:1px solid #a8a193; display:flex; align-items:center; justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#25211c"><rect x="6.5" y="4.5" width="4" height="15" rx="0.5"/><rect x="13.5" y="4.5" width="4" height="15" rx="0.5"/></svg>
+          </div>
+          <div style="width:32px; height:32px; border-radius:4px; background:linear-gradient(#f7f5f0,#e5e1d8); border:1px solid #bcb5a7; display:flex; align-items:center; justify-content:center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#3b362e"><rect x="5" y="5" width="14" height="14" rx="1"/></svg>
+          </div>
+          <div style="width:32px; height:32px; border-radius:4px; background:linear-gradient(#f7f5f0,#e5e1d8); border:1px solid #bcb5a7; display:flex; align-items:center; justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3b362e"><path d="M6 5v14l10-7z"/><rect x="16.4" y="5" width="2.6" height="14"/></svg>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <div style="width:30px; height:30px; border-radius:4px; background:#d2ccc0; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3b362e" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h11"/></svg>
+          </div>
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.5"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M7.5 12.4h3M13.5 12.4h3" stroke-linecap="round"/></svg>
+          </div>
+          <div style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/></svg>
+          </div>
+          <div style="width:1px; height:22px; background:#c8c2b6; margin:0 7px;"></div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c564c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.4L12 5.5v13L7.4 14.5H4z"/><path d="M16 9.4a4 4 0 0 1 0 5.2"/><path d="M18.6 7a7.6 7.6 0 0 1 0 10"/></svg>
+          <div style="position:relative; width:90px; height:7px; border-radius:2px; background:#cdc7ba; border:1px solid #bcb5a7;">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:72%; background:{{accent}};"></div>
+            <div style="position:absolute; left:72%; top:-3px; width:8px; height:11px; margin-left:-4px; border-radius:2px; background:#f6f4ef; border:1px solid #96907f;"></div>
+          </div>
+          <div class="mono" style="font-size:10.5px; color:#4d483f; width:32px; text-align:right;">72%</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:25px; flex-shrink:0; background:#dcd8d0; border-top:1px solid #c8c2b6; display:flex; align-items:center; justify-content:space-between; padding:0 11px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:5px; height:5px; border-radius:50%; background:#5f8f4a;"></div>
+        <div class="mono" style="font-size:10px; color:#4d483f;">Playing</div>
+        <div class="mono" style="font-size:10px; color:#8b8478;">3 of 12 · repeat all</div>
+      </div>
+      <div class="mono" style="font-size:10px; color:#6d675e; display:flex; gap:14px;">
+        <span>H.264 High@L4.0</span><span>1920×1080</span><span>30 fps</span><span>5.12 Mb/s</span><span>AAC-LC 2.0 128 kb/s</span><span style="color:#4d7a3a;">VA-API</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:1006px; width:1240px;">
+    The sidebar takes width from the video rather than covering it. Row 7 shows the unreachable-file state — greyed, still listed, never silently dropped from the queue.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1524px; top:190px; width:252px;"><b>Splitter</b>Drag to resize, double-click to collapse. Width persists per window, not per file. Minimum 240&nbsp;px before it snaps shut.</div>
+    <div class="lead" style="left:1420px; top:200px; width:96px;"></div><div class="dot" style="left:1416px; top:197.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:320px; width:252px;"><b>Row anatomy</b>Index, title, container/codec/resolution, duration. The codec line is what makes a playlist useful for anyone auditing a library.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:470px; width:252px;"><b>Three row states</b>Playing (accent fill, 3&nbsp;px marker), hovered (warm grey), missing (greyed with the reason inline). Selection is separate from playing.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:626px; width:252px;"><b>Ordering</b>Drag to reorder; the queue is the source of truth for next/previous. Shuffle picks without repetition until the queue is exhausted.</div>
+
+    <div class="ann" style="position:absolute; left:1524px; top:762px; width:252px;"><b>Import safety</b>Adding a folder scans one level for known extensions and probes nothing until a row is actually played — opening a playlist must never touch every file.</div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#b06a1e","options":["#b06a1e","#2f6ea8","#4d7a3a","#a63d2f"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#b06a1e', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>

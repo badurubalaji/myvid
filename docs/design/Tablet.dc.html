@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    a { color:#b06a1e; } a:hover { color:#8a5115; }
+    .mono { font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+    .hatch { background-color:#0b0b0a; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.030) 0 1px, transparent 1px 10px); }
+    .ann { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; line-height:1.5; letter-spacing:.01em; color:#726c62; }
+    .ann b { color:#a9641c; font-weight:600; display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+    .lead { position:absolute; height:1px; border-top:1px dashed #cbc4b6; }
+    .leadv { position:absolute; width:1px; border-left:1px dashed #cbc4b6; }
+    .dot { position:absolute; width:5px; height:5px; border-radius:50%; background:#a9641c; }
+    .kbd { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid rgba(255,255,255,.20); border-radius:4px; color:#cdc7bb; }
+    .kbdl { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:9.5px; padding:2px 6px; border:1px solid #c2bbae; border-radius:4px; color:#4a453d; background:#f4f2ed; }
+    .sheettitle { font-size:15px; font-weight:600; color:#26231e; letter-spacing:-0.01em; }
+    .sheetmeta { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; letter-spacing:.08em; text-transform:uppercase; }
+    .cap { font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:10px; color:#8c8578; line-height:1.6; }
+  </style>
+</helmet>
+<div style="position:relative; width:1384px; height:928px; background:#e9e6e0; overflow:hidden;">
+
+  <div style="position:absolute; left:40px; top:24px; display:flex; align-items:baseline; gap:14px;">
+    <div class="sheettitle">Responsive — Touch / narrow</div>
+    <div class="sheetmeta">C2 · 1024 × 768 · buffering state</div>
+  </div>
+
+  <div style="position:absolute; left:40px; top:84px; width:1024px; height:768px; border-radius:10px; overflow:hidden; background:#0a0a09; box-shadow:0 18px 46px rgba(30,26,20,.22), 0 2px 6px rgba(30,26,20,.10);">
+
+    <div class="hatch" style="position:absolute; inset:0;"></div>
+    <div style="position:absolute; inset:0; background:rgba(6,6,5,.46);"></div>
+
+    <!-- buffering -->
+    <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px;">
+      <svg width="52" height="52" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="14.5" stroke="rgba(255,255,255,.15)" stroke-width="2.4"/><path d="M18 3.5a14.5 14.5 0 0 1 12.6 7.3" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+        <div style="font-size:14px; color:#e7e2d7; font-weight:500;">Buffering</div>
+        <div class="mono" style="font-size:11px; color:#8d8779; letter-spacing:.03em;">34% · 2.1 MB/s · 6.4 s ahead</div>
+      </div>
+    </div>
+
+    <!-- top bar -->
+    <div style="position:absolute; left:0; top:0; right:0; height:120px; background:linear-gradient(to bottom, rgba(0,0,0,.66), rgba(0,0,0,0));"></div>
+    <div style="position:absolute; left:0; top:0; right:0; height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 20px;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; margin-left:-10px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ded8cd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5L7.5 12l7.5 7.5"/></svg>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div style="font-size:14px; color:#ede8dd; font-weight:500;">Tears of Steel</div>
+          <div class="mono" style="font-size:10px; color:#75705f;">HLS · 2160p · adaptive</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ded8cd" stroke-width="1.6"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><rect x="12" y="11" width="8" height="6.5" rx="1.5" fill="#ded8cd" stroke="none"/></svg>
+        </div>
+        <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ded8cd" stroke-width="1.8" stroke-linecap="round"><circle cx="5.2" cy="12" r="1.5" fill="#ded8cd" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="#ded8cd" stroke="none"/><circle cx="18.8" cy="12" r="1.5" fill="#ded8cd" stroke="none"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- gesture zones -->
+    <div style="position:absolute; left:0; top:64px; width:50%; bottom:190px; border-right:1px dashed rgba(224,163,74,.22); display:flex; align-items:center; justify-content:center;">
+      <div class="mono" style="font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:rgba(224,163,74,.42); text-align:center; line-height:2;">double-tap −10 s<br>drag ↕ brightness</div>
+    </div>
+    <div style="position:absolute; right:0; top:64px; width:50%; bottom:190px; display:flex; align-items:center; justify-content:center;">
+      <div class="mono" style="font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:rgba(224,163,74,.42); text-align:center; line-height:2;">double-tap +10 s<br>drag ↕ volume</div>
+    </div>
+
+    <!-- bottom control sheet -->
+    <div style="position:absolute; left:0; right:0; bottom:0; height:186px; background:linear-gradient(to top, rgba(0,0,0,.80) 40%, rgba(0,0,0,0)); display:flex; flex-direction:column; justify-content:flex-end; gap:18px; padding:0 20px 22px;">
+
+      <div style="position:relative; height:10px; border-radius:5px; background:rgba(255,255,255,.15);">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:41%; border-radius:5px; background:rgba(255,255,255,.26);"></div>
+        <div style="position:absolute; left:0; top:0; bottom:0; width:29%; border-radius:5px; background:{{accent}};"></div>
+        <div style="position:absolute; left:29%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.55);"></div>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="mono" style="font-size:13px;"><span style="color:#f1eee8;">00:03:34</span><span style="color:#6d685e;"> / 00:12:14</span></div>
+
+        <div style="display:flex; align-items:center; gap:30px;">
+          <div style="width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#e7e2d7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5V2.6L6.8 5.9 11 9.2V6.3"/><path d="M11 5.5a7.2 7.2 0 1 1-7 5.6"/><text x="12" y="15.6" font-size="6.2" fill="#e7e2d7" stroke="none" text-anchor="middle" font-family="IBM Plex Mono, monospace">10</text></svg>
+          </div>
+          <div style="width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center;">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="#f7f4ee"><rect x="6.5" y="4.5" width="4" height="15" rx="1"/><rect x="13.5" y="4.5" width="4" height="15" rx="1"/></svg>
+          </div>
+          <div style="width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#e7e2d7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5.5V2.6L17.2 5.9 13 9.2V6.3"/><path d="M13 5.5a7.2 7.2 0 1 0 7 5.6"/><text x="12" y="15.6" font-size="6.2" fill="#e7e2d7" stroke="none" text-anchor="middle" font-family="IBM Plex Mono, monospace">10</text></svg>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.5"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M7.5 12.4h3M13.5 12.4h3" stroke-linecap="round"/></svg>
+          </div>
+          <div style="width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#e7e2d7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position:absolute; left:40px; top:874px; width:1024px;">
+    Six controls instead of thirteen. Speed, tracks and video settings move into the overflow sheet behind the &hellip; button — reachable, just not competing for the thumb.
+  </div>
+
+  <sc-if value="{{ann}}" hint-placeholder-val="{{ true }}">
+  <div>
+    <div class="ann" style="position:absolute; left:1104px; top:96px; width:240px;"><b>Breakpoint</b>Below 1100&nbsp;px of window width the desktop bar is dropped for this layout. It is a different widget tree, not the same one squeezed.</div>
+
+    <div class="ann" style="position:absolute; left:1104px; top:230px; width:240px;"><b>Touch targets</b>44&nbsp;px minimum, 56&nbsp;px used, 64&nbsp;px for play/pause. Scrub handle grows to 22&nbsp;px with a 44&nbsp;px invisible hit area around it.</div>
+    <div class="lead" style="left:1000px; top:240px; width:96px;"></div><div class="dot" style="left:996px; top:237.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1104px; top:386px; width:240px;"><b>Gesture zones</b>Dashed guides are annotation only — nothing is drawn at runtime. Each gesture shows a transient centred readout while it is active.</div>
+
+    <div class="ann" style="position:absolute; left:1104px; top:526px; width:240px;"><b>Buffering</b>Dims the frame, states the rate and how far ahead the buffer runs. A stall with no numbers is indistinguishable from a hang.</div>
+    <div class="lead" style="left:1000px; top:536px; width:96px;"></div><div class="dot" style="left:996px; top:533.5px;"></div>
+
+    <div class="ann" style="position:absolute; left:1104px; top:664px; width:240px;"><b>Same window</b>This is the desktop window resized, not a separate mobile build. The layout switch is a width check in the view function.</div>
+
+    <div class="ann" style="position:absolute; left:1104px; top:790px; width:240px;"><b>Keyboard still works</b>A tablet layout does not mean a keyboard-hostile one — every shortcut stays bound for anyone on a detachable.</div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e0a34a","options":["#e0a34a","#5aa9e6","#7fb069","#e0654a"]},"ann":{"editor":"boolean","default":true,"section":"Spec"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#e0a34a', ann: this.props.ann ?? true };
+  }
+}
+</script>
+</body>
+</html>
