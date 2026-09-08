@@ -16,6 +16,13 @@ gstreamer-app = "0.25"
 gstreamer-video = "0.25"
 
 anyhow = "1"
+bincode = { version = "2", features = ["derive", "std"] }
+
+# Sandboxing the decode process. Linux-only by nature; the worker falls back to
+# running unconfined (and says so) anywhere these are unavailable.
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = "0.4"
+rustix = { version = "1", features = ["fs", "net", "mm", "process", "pipe", "event"] }
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
 
 # Small binary, no debug bloat. `cargo clean` after install reclaims target/.

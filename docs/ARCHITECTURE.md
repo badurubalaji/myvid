@@ -166,6 +166,17 @@ ends the process and the unwinding tables were dead weight. One consequence:
 - **Buffered range on the scrub bar.** The bar is an `iced` slider, which shows
   played and remaining but not a third band. Needs a custom widget.
 
+## Errors
+
+Every pipeline error goes two places: an in-window chip with a **Copy** button,
+and stderr. An error a user cannot copy out of the window is an error they
+cannot report, which is exactly what happened the first time one appeared.
+
+The subtitle sink deliberately declares no caps. Constraining it to `text/x-raw`
+means `playsink` cannot connect a bitmap subtitle track (PGS, VobSub) at all,
+and it fails the entire file with a `GstPlaySink` error rather than simply not
+showing subtitles. It now accepts anything and skips what cannot be drawn.
+
 ## Diagnostics
 
 `MYVID_DIAG=1 myvid <file>` reports, once a second, the frame count, resolution,

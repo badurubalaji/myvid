@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use iced::keyboard::{key::Named, Key};
 use iced::widget::{
-    button, column, container, row, slider, stack, text, Space,
+    button, column, container, row, slider, stack, text, text_input, Space,
 };
 use iced::window;
 use iced::{Alignment, Element, Length, Subscription, Task};
@@ -25,6 +25,8 @@ use icons::Glyph;
 const IDLE_TIMEOUT: Duration = Duration::from_millis(2400);
 const TICK: Duration = Duration::from_millis(150);
 const SKIP: i64 = 10;
+/// Identifier for the URL field, so it can be focused when the prompt opens.
+const URL_FIELD: &str = "myvid-url-field";
 /// Playback speeds `[` and `]` step through.
 const RATES: &[f64] = &[0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
@@ -75,6 +77,8 @@ pub struct Myvid {
     fullscreen: bool,
     /// A file is being dragged over the window.
     hovering: bool,
+    /// Contents of the URL prompt while it is open.
+    url_prompt: Option<String>,
     /// A file named on the command line, held until the engine exists.
     pending: Option<String>,
 }
@@ -104,6 +108,11 @@ pub enum Message {
     ClearClip,
     SetContainer(Container),
     ExportClip,
+    ShowUrlPrompt,
+    UrlInput(String),
+    SubmitUrl,
+    CloseUrlPrompt,
+    CopyError,
     DismissError,
 }
 
@@ -137,6 +146,7 @@ impl Myvid {
                 last_activity: Instant::now(),
                 fullscreen: false,
                 hovering: false,
+                url_prompt: None,
                 pending,
             },
             Task::none(),
@@ -369,6 +379,34 @@ impl Myvid {
                 }
             }
 
+            Message::ShowUrlPrompt => {
+                self.wake();
+                self.url_prompt = Some(String::new());
+                return iced::widget::operation::focus(URL_FIELD);
+            }
+
+            Message::UrlInput(value) => {
+                self.url_prompt = Some(value);
+            }
+
+            Message::SubmitUrl => {
+                let Some(url) = self.url_prompt.take().filter(|u| !u.trim().is_empty()) else {
+                    self.url_prompt = None;
+                    return Task::none();
+                };
+                return self.open(url.trim());
+            }
+
+            Message::CloseUrlPrompt => {
+                self.url_prompt = None;
+            }
+
+            Message::CopyError => {
+                if let Some(message) = &self.error {
+                    return iced::clipboard::write(message.clone());
+                }
+            }
+
             Message::DismissError => self.error = None,
         }
 
@@ -459,7 +497,17 @@ impl Myvid {
 
         self.wake();
 
+        // While the prompt is open only Escape is a shortcut; everything else
+        // is someone typing a URL.
+        if self.url_prompt.is_some() {
+            return match key.as_ref() {
+                Key::Named(Named::Escape) => self.update(Message::CloseUrlPrompt),
+                _ => Task::none(),
+            };
+        }
+
         let message = match key.as_ref() {
+            Key::Character("l") if modifiers.command() => Some(Message::ShowUrlPrompt),
             Key::Named(Named::Space) => Some(Message::TogglePlay),
             Key::Named(Named::ArrowLeft) => Some(Message::Skip(-5)),
             Key::Named(Named::ArrowRight) => Some(Message::Skip(5)),
@@ -587,6 +635,10 @@ impl Myvid {
             layers.push(self.error_layer(message));
         }
 
+        if let Some(value) = &self.url_prompt {
+            layers.push(self.url_layer(value));
+        }
+
         stack(layers).width(Length::Fill).height(Length::Fill).into()
     }
 
@@ -605,13 +657,25 @@ impl Myvid {
         .style(theme::accent_button)
         .on_press(Message::OpenDialog);
 
+        let open_url = button(
+            row![
+                text("Open URL").size(12.5).color(theme::TEXT),
+                text("Ctrl L").size(10).color(theme::FAINT),
+            ]
+            .spacing(9)
+            .align_y(Alignment::Center),
+        )
+        .padding([9, 16])
+        .style(theme::ghost_button)
+        .on_press(Message::ShowUrlPrompt);
+
         let shortcuts = row![
             hint("Space", "play / pause"),
             hint("J / L", "±10 s"),
             hint("F", "fullscreen"),
             hint("M", "mute"),
             hint("[ ]", "speed"),
-            hint("O", "open"),
+            hint("Ctrl O", "open file"),
         ]
         .spacing(22);
 
@@ -625,13 +689,11 @@ impl Myvid {
             icons::icon(Glyph::Folder, 40.0, icon_color),
             column![
                 text(prompt).size(18).color(theme::TEXT),
-                text("or a stream URL on the command line")
-                    .size(12)
-                    .color(theme::FAINT),
+                text("or open a stream URL").size(12).color(theme::FAINT),
             ]
             .spacing(7)
             .align_x(Alignment::Center),
-            open,
+            row![open, open_url].spacing(11).align_y(Alignment::Center),
             Space::new().height(6),
             shortcuts,
             text(
@@ -644,6 +706,50 @@ impl Myvid {
         .align_x(Alignment::Center);
 
         container(body)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
+            .into()
+    }
+
+    /// Somewhere to paste a stream URL. Reaching this only from the command
+    /// line was not a feature.
+    fn url_layer<'a>(&self, value: &'a str) -> Element<'a, Message> {
+        let field = text_input("https://example.com/stream.m3u8", value)
+            .id(URL_FIELD)
+            .size(14)
+            .padding([11, 14])
+            .style(theme::field)
+            .on_input(Message::UrlInput)
+            .on_submit(Message::SubmitUrl);
+
+        let body = column![
+            text("Open a stream").size(15).color(theme::TEXT),
+            text("HTTP, HTTPS, HLS, DASH, RTSP, RTMP, UDP and SRT")
+                .size(10)
+                .color(theme::FAINT),
+            field,
+            row![
+                text("Enter to play · Esc to cancel")
+                    .size(10)
+                    .color(theme::FAINT),
+                Space::new().width(Length::Fill),
+                button(text("Cancel").size(12).color(theme::MUTED))
+                    .padding([8, 14])
+                    .style(theme::ghost_button)
+                    .on_press(Message::CloseUrlPrompt),
+                button(text("Play").size(12))
+                    .padding([8, 16])
+                    .style(theme::accent_button)
+                    .on_press(Message::SubmitUrl),
+            ]
+            .spacing(10)
+            .align_y(Alignment::Center),
+        ]
+        .spacing(13);
+
+        container(container(body).width(460).padding([20, 22]).style(theme::glass))
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x(Length::Fill)
@@ -1006,6 +1112,10 @@ impl Myvid {
             row![
                 text("Playback error").size(12).color(theme::DANGER),
                 text(message).size(11).color(theme::MUTED),
+                button(text("Copy").size(11).color(theme::TEXT))
+                    .padding([4, 8])
+                    .style(theme::ghost_button)
+                    .on_press(Message::CopyError),
                 button(text("Dismiss").size(11).color(theme::TEXT))
                     .padding([4, 8])
                     .style(theme::ghost_button)

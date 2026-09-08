@@ -34,6 +34,9 @@ myvid                       # opens with a drop target and a file picker
 Drag a file onto the window at any time, whether or not something is already
 playing.
 
+For a stream, press `Ctrl`+`L` or use **Open URL** on the opening screen, then
+paste and press Enter. HTTP, HTTPS, HLS, DASH, RTSP, RTMP, UDP and SRT all work.
+
 | Key | |
 |---|---|
 | `Space` / `K` | play / pause |
@@ -47,6 +50,7 @@ playing.
 | `I` `O` | mark clip in / out |
 | `E` | export the marked clip |
 | `Ctrl`+`O` | open a file |
+| `Ctrl`+`L` | open a stream URL |
 
 The controls fade after 2.4 s of a still pointer while playing, and come back on
 any movement, keypress or state change.

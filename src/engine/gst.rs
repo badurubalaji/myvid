@@ -151,7 +151,7 @@ impl GstEngine {
                                 .map(|s| s.path_string().to_string())
                                 .unwrap_or_else(|| "pipeline".into());
                             let detail = err.debug().unwrap_or_default();
-                            (self.emit)(Event::Error(format!(
+                            let message = format!(
                                 "{}: {}{}",
                                 source,
                                 err.error(),
@@ -160,7 +160,12 @@ impl GstEngine {
                                 } else {
                                     format!(" ({detail})")
                                 }
-                            )));
+                            );
+                            // Always on stderr, not just under MYVID_DIAG: an
+                            // error a user cannot copy out of the window is an
+                            // error they cannot report.
+                            eprintln!("myvid error: {message}");
+                            (self.emit)(Event::Error(message));
                         }
                         MessageView::Warning(w) => {
                             eprintln!("gst warning: {}", w.error());
@@ -710,10 +715,13 @@ impl PlanarFrame for GstFrame {
 /// cue needs no scheduling of its own — only a duration telling us when to clear
 /// it again.
 fn build_text_sink(emit: &EventSink) -> Result<gst::Element> {
+    // Deliberately no caps filter. Constraining this to `text/x-raw` means
+    // playsink cannot connect a bitmap subtitle track (PGS, VobSub) at all, and
+    // it fails the whole file with a GstPlaySink error rather than simply not
+    // showing subtitles. Accept anything, then ignore what we cannot draw.
     let appsink = gst_app::AppSink::builder()
-        .caps(&gst::Caps::builder("text/x-raw").build())
         .max_buffers(4)
-        .drop(false)
+        .drop(true)
         .sync(true)
         .build();
 
@@ -723,6 +731,16 @@ fn build_text_sink(emit: &EventSink) -> Result<gst::Element> {
             .new_sample(move |sink| {
                 let sample = sink.pull_sample().map_err(|_| gst::FlowError::Eos)?;
                 let buffer = sample.buffer().ok_or(gst::FlowError::Error)?;
+                // Only text subtitles can be drawn today; bitmap formats arrive
+                // here too and are skipped rather than rendered as mojibake.
+                let is_text = sample
+                    .caps()
+                    .and_then(|caps| caps.structure(0).map(|s| s.name().starts_with("text/")))
+                    .unwrap_or(false);
+                if !is_text {
+                    return Ok(gst::FlowSuccess::Ok);
+                }
+
                 let map = buffer.map_readable().map_err(|_| gst::FlowError::Error)?;
 
                 let raw = String::from_utf8_lossy(map.as_slice());
@@ -1348,5 +1366,46 @@ mod hardware_tests {
     fn ignores_elements_that_are_not_decoders() {
         assert!(!is_hardware_decoder("videoconvert"));
         assert!(!is_hardware_decoder("vaapipostproc"));
+    }
+}
+
+#[cfg(test)]
+mod reopen_tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    /// Opening a second file into a live pipeline — what dragging a file onto a
+    /// playing window does — must not error. `playsink` keeps state across a
+    /// URI change, and getting the reset wrong shows up here rather than in the
+    /// window.
+    #[test]
+    fn opening_a_second_file_does_not_error() {
+        let Some(media) = std::env::var_os("MYVID_TEST_MEDIA") else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA");
+            return;
+        };
+        let Some(second) = std::env::var_os("MYVID_TEST_MEDIA2") else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA2");
+            return;
+        };
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let emit: EventSink = Arc::new(move |event| {
+            if let Event::Error(message) = event {
+                let _ = tx.send(message);
+            }
+        });
+
+        let engine = GstEngine::new(emit).expect("engine");
+
+        for (round, path) in [media, second].into_iter().enumerate() {
+            let uri = crate::engine::to_uri(&path.to_string_lossy()).expect("uri");
+            engine.open(&uri).unwrap_or_else(|e| panic!("open {round}: {e}"));
+            engine.play();
+            std::thread::sleep(Duration::from_secs(3));
+        }
+
+        let errors: Vec<String> = rx.try_iter().collect();
+        assert!(errors.is_empty(), "reopening produced errors: {errors:#?}");
     }
 }

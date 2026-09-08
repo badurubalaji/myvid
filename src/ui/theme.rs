@@ -146,6 +146,27 @@ pub fn accent_button(_theme: &iced::Theme, status: button::Status) -> button::St
     }
 }
 
+/// The URL field.
+pub fn field(_theme: &iced::Theme, status: iced::widget::text_input::Status) -> iced::widget::text_input::Style {
+    let border = match status {
+        iced::widget::text_input::Status::Focused { .. } => ACCENT,
+        _ => GLASS_BORDER,
+    };
+
+    iced::widget::text_input::Style {
+        background: Background::Color(rgba(0xff, 0xff, 0xff, 0.06)),
+        border: Border {
+            color: border,
+            width: 1.0,
+            radius: 8.0.into(),
+        },
+        icon: MUTED,
+        placeholder: FAINT,
+        value: TEXT,
+        selection: Color { a: 0.35, ..ACCENT },
+    }
+}
+
 /// The scrub bar: accent behind the handle, faint track ahead of it.
 pub fn scrub(_theme: &iced::Theme, status: slider::Status) -> slider::Style {
     let handle_radius = match status {
