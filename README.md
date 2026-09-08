@@ -31,6 +31,9 @@ myvid https://example.com/stream.m3u8
 myvid                       # opens with a drop target and a file picker
 ```
 
+Drag a file onto the window at any time, whether or not something is already
+playing.
+
 | Key | |
 |---|---|
 | `Space` / `K` | play / pause |
@@ -78,6 +81,24 @@ Audio: whatever `gstreamer1.0-libav` and the plugin set provide.
 
 Hardware decode is used where the GPU offers it (VA-API on Intel and AMD). The
 control bar says `GPU decode` or `CPU decode` so you can tell which you got.
+
+Verified on an Intel Iris Xe (Tiger Lake):
+
+| File | Decoder | |
+|---|---|---|
+| MKV · H.264 | `vah264dec` | hardware |
+| MKV · HEVC | `vah265dec` | hardware |
+| MKV · AV1 | `vaav1dec` | hardware |
+| MP4 · H.264 | `vah264dec` | hardware |
+| MOV · H.264 | `vah264dec` | hardware |
+| TS · H.264 | `vah264dec` | hardware |
+| WebM · VP9 | `vavp9dec` | hardware |
+| WebM · VP8 | `vavp8dec` | hardware |
+| MOV · ProRes | `avdec_prores` | software |
+| AVI · MPEG-4 | `avdec_mpeg4` | software |
+
+ProRes and MPEG-4 have no fixed-function block on this GPU, so falling back to
+software there is correct rather than a failure.
 
 Subtitles: SubRip and ASS/SSA render as text. PGS and VobSub are bitmap formats
 and are not drawn yet.

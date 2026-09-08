@@ -109,6 +109,14 @@ the playback pipeline untouched. The cost is a runtime dependency on the
 A consequence worth stating in the UI, and stated there: a stream copy can only
 cut on a keyframe, so a clip starts at the keyframe at or before the in point.
 
+**Hardware decode is detected by vendor prefix, not by a list of names.** A fixed
+list got this wrong: `vavp8dec` was reported as software purely because the list
+happened not to mention VP8, and the readout in the control bar is the only way a
+user can tell whether their fans are about to spin up. Matching the prefixes
+covers the whole VA-API, NVIDIA, D3D11/12, VideoToolbox, V4L2-stateless, QSV and
+AMF families, including decoders that do not exist yet. Three tests pin the
+behaviour, including that `vaapipostproc` is not a decoder.
+
 ## Footprint
 
 Measured on the test file (1080p H.264, E-AC-3 5.1), debug build: **~226 MiB
