@@ -33,10 +33,23 @@ the second mode. They share one `SOCK_SEQPACKET` socket: sequenced packets keep
 message boundaries, so each send is one message needing no length framing, and a
 descriptor attached to it arrives with the message it belongs to.
 
-**The decoder is never told where anything is.** The player opens the file and
-passes the descriptor; the decoder plays `fd://N`. That is what makes the
-restriction meaningful — a decoder that never needs to open a path can be denied
-the ability to open one.
+**Each file gets its own decoder, confined to that file.** The player starts a
+decode process per file and tells it the path *before* the sandbox closes, so the
+ruleset can name it: that process can then read exactly one film and nothing
+else, not even its neighbours in the same directory. A new file means a new
+process, because Landlock can only ever be narrowed — a decoder confined for one
+film can never be widened to another. The cost is a process start per open, paid
+at the moment a person chooses something.
+
+An earlier version passed a *descriptor* instead, so the decoder needed no path
+at all and could be denied the filesystem outright. That was tighter, and it was
+wrong: `fdsrc` mishandles seeks near the end of a file. Measured over five runs
+each on the same file, `fd://` failed 5 times and `file://` failed 0, with the
+demuxer reporting `got eos and didn't receive a complete header object`. Naming
+the descriptor through `/proc/self/fd/N` does not rescue it either — Landlock
+resolves that to the real path and denies it, which is the sandbox working
+correctly. A player that cannot seek is not worth a tighter sandbox, so the
+sandbox got looser by exactly one file.
 
 **Order matters more than policy.** GStreamer builds its plugin registry under
 `$HOME/.cache` and reads widely doing it, so the sandbox is applied *after*
@@ -68,6 +81,29 @@ stale anyway. Two processes also means two sets of libraries resident.
 
 Clip export deliberately stays in the *player*. It reads a path and writes a new
 one, which is precisely the ability the sandbox exists to remove.
+
+**Seeks are clamped inside the media and snap backwards.** A target at or past
+the end puts the demuxer beyond the last byte, where it reads nothing and reports
+a missing header — killing playback. `KEY_UNIT` alone makes this worse, because
+it snaps to the *nearest* keyframe, which near the end means snapping forward off
+the end. Targets are clamped two seconds short of the duration and seek with
+`SNAP_BEFORE`, so a seek always lands on data.
+
+**The decoder cannot be wedged, and cannot outlive the player.** Two faults found
+while chasing the seek bug, both in the process split rather than in GStreamer:
+
+- Frame notices were sent with a blocking write. A player that stopped reading
+  filled the socket, the decode loop blocked in `sendmsg`, and it could then no
+  longer notice the player had gone. Frame notices now use a non-blocking send
+  and are dropped when the socket is full — the next frame supersedes them
+  anyway. Control messages still block, because losing those matters.
+- A killed player left a decoder running, still holding the audio device and the
+  media file. The worker now sets `PR_SET_PDEATHSIG`, so the kernel takes it down
+  with its parent, and checks for an already-dead parent in case it lost the
+  race.
+
+`EINTR` is also retried on both sides. Treating a signal as "the peer is gone"
+tore down a healthy connection and deadlocked the other end.
 
 ## Decisions worth knowing
 

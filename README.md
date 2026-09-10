@@ -109,11 +109,11 @@ and are not drawn yet.
 
 ## Isolation
 
-Decoding runs in a separate process, confined with Landlock. A file that
-compromises a demuxer gets a process that cannot read your documents, your keys
-or your browser profile, and cannot write anywhere outside the GPU and the audio
-socket. The decoder is handed the media as an open descriptor and never learns
-where it lives.
+Each file is decoded in its own process, confined with Landlock to that one
+file. A film that compromises a demuxer gets a process that can read the film it
+was opened for and nothing else — not your documents, your keys, your browser
+profile, nor even the other files in the same folder — and can write nowhere
+outside the GPU and the audio socket.
 
 ```
 myvid decoder: landlock: enforced

@@ -24,9 +24,14 @@ const MAX_MESSAGE: usize = 256 * 1024;
 /// Player to decoder.
 #[derive(Encode, Decode, Debug, Clone)]
 pub enum Request {
-    /// Play the media on the attached descriptor. The decoder is never given a
-    /// path, so it never needs the ability to open one.
-    PlayAttached,
+    /// Confine this decoder to one file, then play it.
+    ///
+    /// The path arrives before the sandbox closes, and is the only thing outside
+    /// the system directories the process will ever be able to open — so a
+    /// decoder is confined to the single film it was started for. `fdsrc`, which
+    /// needs no path at all, mishandles seeks near the end of a file; `filesrc`
+    /// does not, and this keeps the confinement without paying that price.
+    PlayPath(String),
     /// Play a network source, which the decoder must open itself.
     PlayUri(String),
     Resume,
@@ -129,6 +134,16 @@ impl Channel {
         Ok((Channel { socket: a }, Channel { socket: b }))
     }
 
+    /// A channel with nobody on the other end.
+    ///
+    /// Somewhere to point before the first decoder exists. Sends fail and reads
+    /// return nothing, which is exactly what "no decoder yet" should look like.
+    pub fn orphan() -> Result<Channel> {
+        let (ours, theirs) = Channel::pair()?;
+        drop(theirs);
+        Ok(ours)
+    }
+
     /// # Safety
     /// The descriptor must be a connected `SOCK_SEQPACKET` socket.
     pub fn from_fd(socket: OwnedFd) -> Self {
@@ -139,7 +154,26 @@ impl Channel {
         self.socket.as_fd()
     }
 
+    /// Send, waiting for room if the socket is full.
     pub fn send<T: Encode>(&self, message: &T, attach: Option<BorrowedFd<'_>>) -> Result<()> {
+        self.send_inner(message, attach, false).map(|_| ())
+    }
+
+    /// Send only if it can go immediately; `false` means the socket was full.
+    ///
+    /// For a frame or position notice that is the right answer: the next one
+    /// supersedes it, and blocking here stalls the decode loop — including its
+    /// ability to notice the player has gone away.
+    pub fn try_send<T: Encode>(&self, message: &T) -> Result<bool> {
+        self.send_inner(message, None, true)
+    }
+
+    fn send_inner<T: Encode>(
+        &self,
+        message: &T,
+        attach: Option<BorrowedFd<'_>>,
+        non_blocking: bool,
+    ) -> Result<bool> {
         let bytes = bincode::encode_to_vec(message, bincode::config::standard())
             .context("encoding a message")?;
 
@@ -150,15 +184,25 @@ impl Channel {
             control.push(SendAncillaryMessage::ScmRights(fds));
         }
 
-        rustix::net::sendmsg(
-            &self.socket,
-            &[IoSlice::new(&bytes)],
-            &mut control,
-            SendFlags::empty(),
-        )
-        .context("sending a message")?;
+        let flags = if non_blocking {
+            SendFlags::DONTWAIT
+        } else {
+            SendFlags::empty()
+        };
 
-        Ok(())
+        loop {
+            match rustix::net::sendmsg(&self.socket, &[IoSlice::new(&bytes)], &mut control, flags) {
+                Ok(_) => return Ok(true),
+                // A signal is not a failure; the message simply has not gone yet.
+                Err(rustix::io::Errno::INTR) => continue,
+                Err(rustix::io::Errno::AGAIN) | Err(rustix::io::Errno::WOULDBLOCK)
+                    if non_blocking =>
+                {
+                    return Ok(false)
+                }
+                Err(err) => return Err(anyhow::Error::new(err).context("sending a message")),
+            }
+        }
     }
 
     /// Returns `None` when the other end has gone away.
@@ -167,13 +211,20 @@ impl Channel {
         let mut space = [MaybeUninit::uninit(); rustix::cmsg_space!(ScmRights(1))];
         let mut control = RecvAncillaryBuffer::new(&mut space);
 
-        let received = rustix::net::recvmsg(
-            &self.socket,
-            &mut [IoSliceMut::new(&mut buffer)],
-            &mut control,
-            RecvFlags::empty(),
-        )
-        .context("receiving a message")?;
+        let received = loop {
+            match rustix::net::recvmsg(
+                &self.socket,
+                &mut [IoSliceMut::new(&mut buffer)],
+                &mut control,
+                RecvFlags::empty(),
+            ) {
+                Ok(received) => break received,
+                // Interrupted by a signal. Treating this as "the peer is gone"
+                // tears down a healthy connection and deadlocks the other end.
+                Err(rustix::io::Errno::INTR) => continue,
+                Err(err) => return Err(anyhow::Error::new(err).context("receiving a message")),
+            }
+        };
 
         if received.bytes == 0 {
             return Ok(None);

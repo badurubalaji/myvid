@@ -62,7 +62,7 @@ const WRITABLE: &[&str] = &[
 /// open file descriptor from the parent, so the decoder never needs the ability
 /// to open a path at all.
 #[cfg(target_os = "linux")]
-pub fn confine() -> Confinement {
+pub fn confine(media: Option<&Path>) -> Confinement {
     use landlock::{
         ABI, Access, AccessFs, Ruleset, RulesetAttr, RulesetCreatedAttr, RulesetStatus,
         path_beneath_rules,
@@ -80,13 +80,21 @@ pub fn confine() -> Confinement {
         writable.push(runtime);
     }
 
+    // The one file this process is going to play, and nothing else under it.
+    // Naming the file rather than its directory means a decoder confined for one
+    // film cannot read its neighbours.
+    let mut readable: Vec<&Path> = READABLE.iter().map(Path::new).collect();
+    if let Some(media) = media {
+        readable.push(media);
+    }
+
     // `path_beneath_rules` quietly drops paths that do not exist on this system,
     // which is right: one fewer thing to allow, not an error.
     let build = || -> Result<_, landlock::RulesetError> {
         Ruleset::default()
             .handle_access(read_write)?
             .create()?
-            .add_rules(path_beneath_rules(READABLE.iter().map(Path::new), read_only))?
+            .add_rules(path_beneath_rules(readable.iter().copied(), read_only))?
             .add_rules(path_beneath_rules(writable.iter().copied(), read_write))?
             .restrict_self()
     };
@@ -106,7 +114,7 @@ pub fn confine() -> Confinement {
 }
 
 #[cfg(not(target_os = "linux"))]
-pub fn confine() -> Confinement {
+pub fn confine(_media: Option<&Path>) -> Confinement {
     Confinement::Unavailable("only implemented for Linux".to_owned())
 }
 
@@ -116,7 +124,8 @@ pub fn confine() -> Confinement {
 /// process. `myvid --sandbox-selftest <path>` is that process, and the test
 /// suite drives it.
 pub fn selftest(path: &Path) -> ! {
-    let confinement = confine();
+    let allow = std::env::var_os("MYVID_SELFTEST_ALLOW").map(std::path::PathBuf::from);
+    let confinement = confine(allow.as_deref());
     eprintln!("{}", confinement.describe());
 
     let readable = std::fs::File::open(path).is_ok();

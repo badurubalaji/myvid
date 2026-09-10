@@ -10,7 +10,7 @@
 //! only then is the process confined. Everything after that line is parsing
 //! untrusted input with nothing worth stealing in reach.
 
-use std::os::fd::{AsRawFd, OwnedFd};
+use std::os::fd::OwnedFd;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,8 +24,6 @@ use super::{Event, PlaybackEngine};
 enum Incoming {
     Engine(Event),
     Peer(Request),
-    /// The socket carried a descriptor with the last request.
-    Media(OwnedFd),
     PeerGone,
     Tick,
 }
@@ -51,6 +49,22 @@ unsafe fn owned_fd(fd: i32) -> OwnedFd {
 }
 
 fn serve(channel: Channel) -> anyhow::Result<()> {
+    // If the player dies, this process must not outlive it. Without this, a
+    // killed player leaves a decoder running — still holding the audio device
+    // and the file — because the loop that would notice can itself be blocked.
+    #[cfg(target_os = "linux")]
+    {
+        if let Err(err) = rustix::process::set_parent_process_death_signal(Some(
+            rustix::process::Signal::KILL,
+        )) {
+            eprintln!("myvid decoder: could not arm the parent-death signal: {err}");
+        }
+        // The player may already have gone in the gap before that call.
+        if rustix::process::getppid().is_none() {
+            std::process::exit(0);
+        }
+    }
+
     let channel = Arc::new(channel);
     let (tx, rx) = mpsc::channel::<Incoming>();
 
@@ -63,27 +77,16 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
     // element factories, the audio sink's connection to the session bus.
     let engine = GstEngine::new(emit)?;
 
-    let confinement = sandbox::confine();
+    // Confinement waits for the first file. Nothing untrusted has been parsed
+    // yet, and knowing the file lets the ruleset name it — so this decoder ends
+    // up able to read exactly one film and nothing else. A new file means a new
+    // decode process, since Landlock can only ever be narrowed.
     channel.send(
         &Notice::Ready {
-            confinement: confinement.describe(),
+            confinement: "awaiting media".to_owned(),
         },
         None,
     )?;
-    eprintln!("myvid decoder: {}", confinement.describe());
-
-    // Prove it in situ rather than trusting the ruleset was accepted. The
-    // integration tests check the policy; this checks the process actually
-    // running the decoders.
-    if std::env::var_os("MYVID_DIAG").is_some() {
-        if let Some(home) = std::env::var_os("HOME") {
-            let reachable = std::fs::read_dir(&home).is_ok();
-            eprintln!(
-                "[diag] decoder can read $HOME: {}",
-                if reachable { "YES - NOT CONFINED" } else { "no" }
-            );
-        }
-    }
 
     spawn_reader(channel.clone(), tx.clone());
     spawn_ticker(tx);
@@ -94,23 +97,49 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
     let slot = engine.frames();
     let mut surface: Option<Arc<Surface>> = None;
     let mut generation: u64 = 0;
-    // Held for as long as it is playing: dropping it closes the file under the
-    // pipeline.
-    let mut media: Option<OwnedFd> = None;
+    let mut confined = false;
 
     for incoming in rx {
         match incoming {
-            Incoming::Media(fd) => media = Some(fd),
-
             Incoming::Peer(request) => match request {
-                Request::PlayAttached => {
-                    let Some(fd) = media.as_ref() else {
-                        channel.send(&Notice::Failed("no media was attached".into()), None)?;
+                Request::PlayPath(path) => {
+                    if confined {
+                        channel.send(
+                            &Notice::Failed(
+                                "this decoder is already confined to another file".into(),
+                            ),
+                            None,
+                        )?;
                         continue;
+                    }
+
+                    let confinement = sandbox::confine(Some(std::path::Path::new(&path)));
+                    confined = true;
+                    eprintln!("myvid decoder: {}", confinement.describe());
+                    channel.send(
+                        &Notice::Ready {
+                            confinement: confinement.describe(),
+                        },
+                        None,
+                    )?;
+
+                    if std::env::var_os("MYVID_DIAG").is_some() {
+                        if let Some(home) = std::env::var_os("HOME") {
+                            let reachable = std::fs::read_dir(&home).is_ok();
+                            eprintln!(
+                                "[diag] decoder can read $HOME: {}",
+                                if reachable { "YES - NOT CONFINED" } else { "no" }
+                            );
+                        }
+                    }
+
+                    let uri = match ::gstreamer::glib::filename_to_uri(&path, None) {
+                        Ok(uri) => uri.to_string(),
+                        Err(err) => {
+                            channel.send(&Notice::Failed(err.to_string()), None)?;
+                            continue;
+                        }
                     };
-                    // The decoder is handed a descriptor, never a path, so it
-                    // has no need to open anything and the sandbox can deny it.
-                    let uri = format!("fd://{}", fd.as_raw_fd());
                     if let Err(err) = engine.open(&uri) {
                         channel.send(&Notice::Failed(format!("{err:#}")), None)?;
                     } else {
@@ -118,7 +147,18 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
                     }
                 }
                 Request::PlayUri(uri) => {
-                    media = None;
+                    if !confined {
+                        // A network source needs no file at all.
+                        let confinement = sandbox::confine(None);
+                        confined = true;
+                        eprintln!("myvid decoder: {}", confinement.describe());
+                        channel.send(
+                            &Notice::Ready {
+                                confinement: confinement.describe(),
+                            },
+                            None,
+                        )?;
+                    }
                     if let Err(err) = engine.open(&uri) {
                         channel.send(&Notice::Failed(format!("{err:#}")), None)?;
                     } else {
@@ -136,7 +176,9 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
 
             Incoming::Tick => {
                 if let Some(position) = engine.position() {
-                    channel.send(&Notice::Position(position.as_nanos() as u64), None)?;
+                    // Non-blocking: a stalled player must not be able to wedge
+                    // the decode loop, and the next tick supersedes this one.
+                    let _ = channel.try_send(&Notice::Position(position.as_nanos() as u64))?;
 
                     if diagnostics && last_report.elapsed() >= Duration::from_secs(1) {
                         last_report = std::time::Instant::now();
@@ -221,14 +263,12 @@ fn publish_frame(
     }
 
     if let Some(slot_index) = written {
-        channel.send(
-            &Notice::Frame {
-                slot: slot_index,
-                generation: *generation,
-                sent_ns: epoch_nanos(),
-            },
-            None,
-        )?;
+        // Never block on this. A frame notice is superseded by the next one.
+        let _ = channel.try_send(&Notice::Frame {
+            slot: slot_index,
+            generation: *generation,
+            sent_ns: epoch_nanos(),
+        })?;
     }
 
     Ok(())
@@ -267,12 +307,7 @@ fn spawn_reader(channel: Arc<Channel>, tx: Sender<Incoming>) {
         .name("myvid-decoder-rx".into())
         .spawn(move || loop {
             match channel.recv::<Request>() {
-                Ok(Some((request, attached))) => {
-                    if let Some(fd) = attached {
-                        if tx.send(Incoming::Media(fd)).is_err() {
-                            return;
-                        }
-                    }
+                Ok(Some((request, _attached))) => {
                     if tx.send(Incoming::Peer(request)).is_err() {
                         return;
                     }

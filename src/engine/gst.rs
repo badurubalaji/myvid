@@ -470,13 +470,39 @@ impl GstEngine {
         (self.emit)(Event::Tracks(tracks));
     }
 
+    /// Keep a seek inside the media.
+    ///
+    /// Seeking to exactly the duration - which dragging the bar to its end does,
+    /// and which a file whose header overstates its length does at any position -
+    /// puts the demuxer past the last byte. It reads nothing, hits end of
+    /// stream, and reports `got eos and didn't receive a complete header
+    /// object`, killing playback. A margin short of the end costs nothing: no
+    /// one is trying to land on the final frame.
+    fn clamp_target(&self, to: Duration) -> Duration {
+        const MARGIN: Duration = Duration::from_millis(2000);
+
+        match query_duration(&self.playbin) {
+            Some(total) if total > MARGIN => to.min(total - MARGIN),
+            Some(total) => to.min(total),
+            None => to,
+        }
+    }
+
     fn issue_seek(&self, to: Duration) {
         self.seeking.store(true, Ordering::Release);
         let target = gst::ClockTime::from_nseconds(to.as_nanos() as u64);
 
+        // SNAP_BEFORE matters as much as the clamp. KEY_UNIT alone snaps to the
+        // *nearest* keyframe, which near the end of a file means snapping
+        // forward past the last byte - the demuxer then reads nothing and
+        // reports a missing header. Snapping backwards always lands on data,
+        // and landing a fraction early is what every player does anyway.
         if self
             .playbin
-            .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT, target)
+            .seek_simple(
+                gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT | gst::SeekFlags::SNAP_BEFORE,
+                target,
+            )
             .is_err()
         {
             self.seeking.store(false, Ordering::Release);
@@ -544,6 +570,7 @@ impl PlaybackEngine for GstEngine {
     /// flight; the newest target supersedes any waiting one, because an
     /// intermediate position during a drag is of no interest.
     fn seek(&self, to: Duration) {
+        let to = self.clamp_target(to);
         if self.seeking.load(Ordering::Acquire) {
             *self.pending_seek.lock().unwrap() = Some(to);
             return;
@@ -1478,6 +1505,148 @@ mod hardware_tests {
 mod reopen_tests {
     use super::*;
     use std::sync::mpsc;
+
+    /// Does the source tell downstream how big the stream is?
+    ///
+    /// A demuxer that does not know where the file ends cannot clamp a seek to
+    /// it. This compares the two sources directly, with no pipeline around them
+    /// to muddy the answer.
+    #[test]
+    fn a_passed_descriptor_reports_its_size() {
+        let Some(media) = std::env::var_os("MYVID_TEST_MEDIA") else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA");
+            return;
+        };
+        gst::init().expect("gst init");
+
+        let on_disk = std::fs::metadata(&media).expect("stat").len();
+        let file = std::fs::File::open(&media).expect("open");
+
+        let filesrc = gst::ElementFactory::make("filesrc")
+            .property("location", media.to_string_lossy().as_ref())
+            .build()
+            .expect("filesrc");
+        let fdsrc = gst::ElementFactory::make("fdsrc")
+            .property("fd", std::os::fd::AsRawFd::as_raw_fd(&file))
+            .build()
+            .expect("fdsrc");
+
+        let mut sizes = Vec::new();
+        for (name, src) in [("filesrc", &filesrc), ("fdsrc", &fdsrc)] {
+            let pipeline = gst::Pipeline::new();
+            let sink = gst::ElementFactory::make("fakesink").build().expect("fakesink");
+            pipeline.add_many([src, &sink]).expect("add");
+            src.link(&sink).expect("link");
+            let _ = pipeline.set_state(gst::State::Paused);
+            let _ = pipeline.state(gst::ClockTime::from_seconds(5));
+
+            let reported = src.query_duration::<gst::format::Bytes>().map(|b| *b);
+            eprintln!("[probe] {name}: reports {reported:?}, file is {on_disk} bytes");
+            sizes.push((name, reported));
+            let _ = pipeline.set_state(gst::State::Null);
+        }
+
+        for (name, reported) in sizes {
+            assert_eq!(
+                reported,
+                Some(on_disk),
+                "{name} should report the real size so a demuxer can find the end"
+            );
+        }
+    }
+
+    /// Seeking past the end of the file.
+    ///
+    /// The UI computes a seek target from the reported duration. If that
+    /// duration is wrong - or a drag reaches the very end of the bar - the
+    /// target can land beyond the last byte, and what the demuxer does then is
+    /// worth knowing rather than assuming.
+    #[test]
+    fn seeking_beyond_the_end_is_survivable() {
+        let Some(media) = std::env::var_os("MYVID_TEST_MEDIA") else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA");
+            return;
+        };
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let emit: EventSink = Arc::new(move |event| {
+            if let Event::Error(message) = event {
+                let _ = tx.send(message);
+            }
+        });
+
+        let engine = GstEngine::new(emit).expect("engine");
+        let file = std::fs::File::open(&media).expect("open the media");
+        // MYVID_TEST_SCHEME=fd reproduces the regression this test was written
+        // for: handing the decoder a descriptor instead of a path made seeks
+        // near the end of a file fail 5 times out of 5, where a path passes 5
+        // out of 5. The player uses a path.
+        let uri = if std::env::var_os("MYVID_TEST_SCHEME").as_deref()
+            == Some(std::ffi::OsStr::new("fd"))
+        {
+            format!("fd://{}", std::os::fd::AsRawFd::as_raw_fd(&file))
+        } else {
+            let _ = &file;
+            crate::engine::to_uri(&media.to_string_lossy()).expect("uri")
+        };
+
+        engine.open(&uri).expect("open");
+        engine.play();
+        std::thread::sleep(Duration::from_secs(3));
+
+        for minutes in [200u64, 500, 174, 30] {
+            engine.seek(Duration::from_secs(minutes * 60));
+            std::thread::sleep(Duration::from_millis(1500));
+        }
+        std::thread::sleep(Duration::from_secs(2));
+
+        let errors: Vec<String> = rx.try_iter().collect();
+        assert!(errors.is_empty(), "seeking past the end failed: {errors:#?}");
+    }
+
+    /// Seeking a file handed over as a descriptor.
+    ///
+    /// The sandbox means the decoder is given an open descriptor rather than a
+    /// path, so it plays `fd://N` through `fdsrc` instead of `filesrc`. Seeking
+    /// is where those two differ, and this is the path the player actually uses.
+    #[test]
+    fn seeking_works_on_a_passed_descriptor() {
+        let Some(media) = std::env::var_os("MYVID_TEST_MEDIA") else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA");
+            return;
+        };
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let emit: EventSink = Arc::new(move |event| {
+            if let Event::Error(message) = event {
+                let _ = tx.send(message);
+            }
+        });
+
+        let engine = GstEngine::new(emit).expect("engine");
+
+        // Held open for the whole test; closing it would pull the file out from
+        // under the pipeline.
+        let file = std::fs::File::open(&media).expect("open the media");
+        let uri = format!("fd://{}", std::os::fd::AsRawFd::as_raw_fd(&file));
+
+        engine.open(&uri).expect("open");
+        engine.play();
+        std::thread::sleep(Duration::from_secs(3));
+
+        // Long jumps, not a nudge forward. Matroska keeps its cue index at the
+        // end of the file, so seeking half an hour in makes the demuxer read
+        // from a part of the source playback has never touched — which is where
+        // this actually fails.
+        for minutes in [30u64, 62, 45, 90, 15] {
+            engine.seek(Duration::from_secs(minutes * 60));
+            std::thread::sleep(Duration::from_millis(1800));
+        }
+        std::thread::sleep(Duration::from_secs(2));
+
+        let errors: Vec<String> = rx.try_iter().collect();
+        assert!(errors.is_empty(), "seeking a descriptor failed: {errors:#?}");
+    }
 
     /// Dragging the scrub bar fires a seek per pixel of movement. Every one of
     /// those used to be sent straight at the pipeline, which refuses a seek

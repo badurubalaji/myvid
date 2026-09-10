@@ -35,13 +35,46 @@ fn the_sandbox_is_actually_enforced() {
 
 #[test]
 fn playback_keeps_what_it_needs() {
-    for path in ["/usr/lib", "/etc", "/dev/dri", "/dev/null"] {
+    for path in ["/usr/lib", "/dev/dri", "/dev/null"] {
         let path = Path::new(path);
         if !path.exists() {
             continue;
         }
         assert!(can_read(path), "{} should stay reachable", path.display());
     }
+}
+
+/// A decoder is confined to the one file it was started for, and can read no
+/// other — not even its neighbour in the same directory.
+#[test]
+fn only_the_one_file_it_was_given() {
+    // Somewhere the policy denies wholesale, so the only thing making a file
+    // readable is having been named.
+    let dir = std::env::temp_dir().join("myvid-sandbox-test");
+    std::fs::create_dir_all(&dir).expect("scratch dir");
+    let granted = dir.join("granted.mkv");
+    let neighbour = dir.join("neighbour.mkv");
+    std::fs::write(&granted, b"x").expect("write");
+    std::fs::write(&neighbour, b"x").expect("write");
+
+    let reachable = |path: &Path| {
+        Command::new(env!("CARGO_BIN_EXE_myvid"))
+            .arg("--sandbox-selftest")
+            .arg(path)
+            .env("MYVID_SELFTEST_ALLOW", &granted)
+            .output()
+            .expect("selftest runs")
+            .status
+            .success()
+    };
+
+    assert!(reachable(&granted), "the named file should be readable");
+    assert!(
+        !reachable(&neighbour),
+        "a file it was never given should be denied, even next door"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 /// The point of the exercise. A decoder parsing a hostile file must not be able
