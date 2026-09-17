@@ -1,0 +1,18 @@
+# cargo-about configuration: which licenses we accept from dependencies, and in
+# what order of preference when a crate offers a choice. Regenerate with
+#   packaging/licenses.sh
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "Unlicense",
+]
+targets = ["x86_64-unknown-linux-gnu"]
+ignore-build-dependencies = false
+ignore-dev-dependencies = true

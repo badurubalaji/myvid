@@ -1,10 +1,68 @@
-# myvid
+<p align="center">
+  <img src="assets/myvid-256.png" width="160" alt="myvid logo">
+</p>
 
-A video player: GStreamer decodes, wgpu presents, iced draws the chrome.
+<h1 align="center">myvid</h1>
+
+<p align="center">
+  A video player: GStreamer decodes, wgpu presents, iced draws the chrome.<br>
+  Hardware decoding, network streams, and every file decoded in its own sandbox.
+</p>
+
+<p align="center">
+  <a href="https://github.com/badurubalaji/myvid/releases/latest"><b>Download</b></a> ·
+  <a href="#install">Install</a> ·
+  <a href="#use">Use</a> ·
+  <a href="THIRD-PARTY-LICENSES.md">Licenses</a>
+</p>
 
 ## Install
 
+For Ubuntu 24.04 or newer, Debian 13, Linux Mint 22, Pop!_OS 24.04 and other
+64-bit (amd64) distributions based on them.
+
+**One line** — downloads the latest release, verifies its checksum, and installs
+it with apt:
+
 ```sh
+curl -fsSL https://raw.githubusercontent.com/badurubalaji/myvid/main/get.sh | bash
+```
+
+**Or by hand** — download
+[`myvid_amd64.deb`](https://github.com/badurubalaji/myvid/releases/latest/download/myvid_amd64.deb)
+and install it:
+
+```sh
+sudo apt install ./myvid_amd64.deb
+```
+
+apt pulls in GStreamer, the codecs, ffmpeg and the Vulkan loader. Then launch
+**myvid** from your applications menu, or run `myvid film.mkv`.
+
+To remove it:
+
+```sh
+sudo apt remove myvid
+```
+
+### Requirements
+
+- 64-bit x86 Linux with glibc 2.39 or newer
+- A GPU with a Vulkan driver (Intel, AMD, or NVIDIA with its proprietary driver)
+- Wayland or X11
+- Linux 5.13 or newer for the decoder sandbox; older kernels still play, unconfined
+
+On Intel GPUs, `sudo apt install intel-media-va-driver-non-free` (Ubuntu
+*multiverse*) enables hardware decoding for more codecs.
+
+## Build from source
+
+Needs a Rust toolchain (1.92 or newer, from [rustup](https://rustup.rs)) on a
+Debian or Ubuntu system:
+
+```sh
+git clone https://github.com/badurubalaji/myvid.git
+cd myvid
 sudo ./install.sh          # system packages, build, install, reclaim build space
 ```
 
@@ -22,6 +80,20 @@ sudo ./install.sh uninstall
 The binary lands in `~/.local/bin/myvid`, with a desktop entry and icons under
 `~/.local/share`. `target/` is deleted after a successful install — a full build
 tree is several GB and nothing needs it afterwards.
+
+### Making a release
+
+```sh
+cargo build --release --locked
+packaging/licenses.sh                  # refresh THIRD-PARTY-LICENSES.md if Cargo.lock changed
+packaging/build-deb.sh                 # → dist/myvid_<version>_amd64.deb, myvid_amd64.deb, SHA256SUMS
+gh release create v<version> dist/myvid_amd64.deb dist/myvid_*_amd64.deb dist/SHA256SUMS
+```
+
+Bump `version` in `Cargo.toml` and add a `<release>` entry to
+`packaging/linux/io.github.badurubalaji.myvid.metainfo.xml` first. Keep the
+version-less `myvid_amd64.deb` asset: the one-line installer and the download
+link above point at `releases/latest/download/myvid_amd64.deb`.
 
 ## Use
 
@@ -156,3 +228,18 @@ second, plus the video and audio decoders actually chosen:
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the three layers fit
 together and which trade-offs were made deliberately. Interface wireframes for
 both design directions are in `docs/design/`.
+
+## License
+
+myvid is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
+
+It builds on a great deal of other people's work. The Rust crates compiled into
+the binary, and the system libraries it uses at run time — GStreamer, GLib,
+FFmpeg, Mesa and the Vulkan loader — are listed with their licenses and full
+license texts in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md). The same
+file ships in the package at `/usr/share/doc/myvid/`.

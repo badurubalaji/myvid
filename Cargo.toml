@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.92"
 description = "A cross-platform video player — GStreamer decode, wgpu presentation, iced UI"
+authors = ["badurubalaji <badurubalaji@gmail.com>"]
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/badurubalaji/myvid"
+homepage = "https://github.com/badurubalaji/myvid"
+readme = "README.md"
+keywords = ["video", "player", "gstreamer", "wgpu", "iced"]
+categories = ["multimedia::video"]
 
 [dependencies]
 iced = { version = "0.14", default-features = false, features = ["wgpu", "advanced", "tokio", "wayland", "x11", "canvas"] }

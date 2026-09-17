@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.badurubalaji.myvid</id>
+  <name>myvid</name>
+  <summary>Sandboxed video player with hardware decoding</summary>
+  <developer id="io.github.badurubalaji">
+    <name>badurubalaji</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+
+  <description>
+    <p>
+      A video player built on GStreamer, wgpu and iced. It plays local files and
+      network streams, decodes on the GPU where the hardware allows, and runs each
+      file's decoder in its own process confined to that one file.
+    </p>
+    <ul>
+      <li>MKV, MP4, WebM, AVI, MOV, TS and more; H.264, HEVC, AV1, VP9 and more</li>
+      <li>VA-API hardware decoding on Intel and AMD</li>
+      <li>HTTP, HLS, DASH, RTSP, RTMP, UDP and SRT streams</li>
+      <li>Audio and subtitle track picker that shows codec, channels and bitrate</li>
+      <li>Clear dialogue, night mode and a limited volume boost to 150%</li>
+      <li>Lossless clip export without re-encoding</li>
+      <li>Decoder sandboxed with Landlock</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">myvid.desktop</launchable>
+  <icon type="stock">myvid</icon>
+  <provides>
+    <binary>myvid</binary>
+  </provides>
+
+  <url type="homepage">https://github.com/badurubalaji/myvid</url>
+  <url type="bugtracker">https://github.com/badurubalaji/myvid/issues</url>
+  <url type="vcs-browser">https://github.com/badurubalaji/myvid</url>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>video</keyword>
+    <keyword>player</keyword>
+    <keyword>movie</keyword>
+    <keyword>stream</keyword>
+  </keywords>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-09-17">
+      <description>
+        <p>First packaged release.</p>
+      </description>
+    </release>
+  </releases>
+</component>
