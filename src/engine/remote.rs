@@ -7,8 +7,8 @@
 
 use std::os::fd::AsRawFd;
 use std::process::{Child, Command};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -31,14 +31,24 @@ pub struct RemoteEngine {
     /// knows its silence is expected rather than a crash.
     epoch: AtomicU64,
     emit: EventSink,
-    exporting: Arc<std::sync::atomic::AtomicBool>,
+    exporting: Arc<AtomicBool>,
+    /// The current decoder has been given something to play, and so is confined
+    /// to it. The next open needs a new one.
+    spent: AtomicBool,
+    /// What the player last asked for, so a fresh decoder sounds the same as
+    /// the one it replaced.
+    volume: Mutex<f64>,
+    effects: Mutex<AudioEffects>,
+    /// `open` only has `&self`, but restarting hands the listener an `Arc`.
+    this: Weak<Self>,
 }
 
 impl RemoteEngine {
     /// Create the player's side. The decode process starts when a file does.
     pub fn spawn(emit: EventSink) -> Result<Arc<Self>> {
-        let engine = Arc::new(RemoteEngine {
-            channel: Mutex::new(Arc::new(Channel::orphan()?)),
+        let orphan = Arc::new(Channel::orphan()?);
+        let engine = Arc::new_cyclic(|this| RemoteEngine {
+            channel: Mutex::new(orphan),
             slot: FrameSlot::new(),
             position: AtomicU64::new(0),
             duration: AtomicU64::new(0),
@@ -46,7 +56,11 @@ impl RemoteEngine {
             child: Mutex::new(None),
             epoch: AtomicU64::new(0),
             emit,
-            exporting: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            exporting: Arc::new(AtomicBool::new(false)),
+            spent: AtomicBool::new(false),
+            volume: Mutex::new(1.0),
+            effects: Mutex::new(AudioEffects::default()),
+            this: this.clone(),
         });
 
         engine.restart()?;
@@ -90,6 +104,10 @@ impl RemoteEngine {
         *self.channel.lock().unwrap() = Arc::new(ours);
 
         self.clone().listen(epoch);
+
+        // A new decoder starts at playbin's defaults; carry the settings over.
+        self.request(Request::Volume(*self.volume.lock().unwrap()));
+        self.request(Request::AudioEffects(*self.effects.lock().unwrap()));
         Ok(())
     }
 
@@ -116,6 +134,13 @@ impl RemoteEngine {
                         }
                         return;
                     };
+
+                    // Notices still queued from a decoder we have replaced
+                    // describe the previous file: its tracks, its position, its
+                    // end. Delivering them would scribble over the new one.
+                    if self.epoch.load(Ordering::SeqCst) != epoch {
+                        return;
+                    }
 
                     match notice {
                         Notice::Ready { confinement } => {
@@ -215,6 +240,12 @@ impl PlaybackEngine for RemoteEngine {
         self.duration.store(0, Ordering::Relaxed);
         *self.source.lock().unwrap() = Some(uri.to_owned());
 
+        // Whatever the previous decoder was given, it can never read this.
+        if self.spent.swap(true, Ordering::SeqCst) {
+            let this = self.this.upgrade().context("the engine is shutting down")?;
+            this.restart()?;
+        }
+
         match ::gstreamer::glib::filename_from_uri(uri) {
             // A local file: give it a decoder of its own, confined to it.
             Ok((path, _)) => {
@@ -249,10 +280,12 @@ impl PlaybackEngine for RemoteEngine {
     }
 
     fn set_volume(&self, volume: f64) {
+        *self.volume.lock().unwrap() = volume;
         self.request(Request::Volume(volume));
     }
 
     fn set_audio_effects(&self, effects: AudioEffects) {
+        *self.effects.lock().unwrap() = effects;
         self.request(Request::AudioEffects(effects));
     }
 
@@ -357,6 +390,52 @@ mod tests {
 
         let errors: Vec<String> = rx.try_iter().collect();
         assert!(errors.is_empty(), "dragging produced errors: {errors:#?}");
+    }
+
+    /// Opening one file after another, as anyone working through a folder does.
+    ///
+    /// A decoder confines itself to the first file it is given and refuses any
+    /// other, so the second open must get a fresh decoder — and that decoder
+    /// must still be playing at the volume the player asked for.
+    #[test]
+    fn opening_a_second_file_gets_a_fresh_decoder() {
+        let (Some(media), Some(_worker)) = (
+            std::env::var_os("MYVID_TEST_MEDIA"),
+            std::env::var_os("MYVID_WORKER"),
+        ) else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA and MYVID_WORKER");
+            return;
+        };
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let emit: EventSink = Arc::new(move |event| {
+            if let Event::Error(message) = event {
+                let _ = tx.send(message);
+            }
+        });
+
+        let engine = RemoteEngine::spawn(emit).expect("decode process starts");
+        let uri = to_uri(&media.to_string_lossy()).expect("uri");
+
+        // The same file twice as well as a different one: both need a new
+        // decoder, since confinement is per process, not per path.
+        let other = std::env::var_os("MYVID_TEST_MEDIA_2")
+            .map(|m| to_uri(&m.to_string_lossy()).expect("uri"))
+            .unwrap_or_else(|| uri.clone());
+
+        engine.set_volume(0.5);
+        for uri in [&uri, &other, &uri] {
+            engine.open(uri).expect("open");
+            engine.play();
+            std::thread::sleep(Duration::from_secs(2));
+            assert!(
+                engine.position().is_some_and(|p| p > Duration::ZERO),
+                "the file should be playing"
+            );
+        }
+
+        let errors: Vec<String> = rx.try_iter().collect();
+        assert!(errors.is_empty(), "reopening produced errors: {errors:#?}");
     }
 
     /// Seeking through the decode process, which is what the player does.
