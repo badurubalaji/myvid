@@ -4,6 +4,7 @@
 //! directly, so a libmpv or ffmpeg backend can be dropped in without the UI
 //! noticing.
 
+pub mod dsp;
 pub mod frame;
 pub mod gst;
 pub mod protocol;
@@ -65,6 +66,19 @@ pub struct Track {
     pub detail: String,
     pub selected: bool,
 }
+
+/// Optional sound processing. Both off means the audio is left untouched.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, bincode::Encode, bincode::Decode)]
+pub struct AudioEffects {
+    /// Lift the centre channel of surround tracks, where the voices are.
+    pub dialogue: bool,
+    /// Compress the dynamic range so quiet and loud scenes sit closer together.
+    pub night: bool,
+}
+
+/// The highest volume the player offers. Anything above 1.0 is gain applied
+/// ahead of a limiter, so it cannot clip.
+pub const MAX_VOLUME: f64 = 1.5;
 
 /// What a clip export should produce.
 #[derive(Debug, Clone)]
@@ -164,7 +178,9 @@ pub trait PlaybackEngine: Send + Sync + 'static {
     fn seek(&self, to: Duration);
     fn position(&self) -> Option<Duration>;
     fn duration(&self) -> Option<Duration>;
+    /// `0.0..=MAX_VOLUME`; above 1.0 is a boost.
     fn set_volume(&self, volume: f64);
+    fn set_audio_effects(&self, effects: AudioEffects);
     fn set_rate(&self, rate: f64);
     fn frames(&self) -> FrameSlot;
 

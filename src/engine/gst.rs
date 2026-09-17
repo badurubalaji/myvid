@@ -15,9 +15,11 @@ use gstreamer::prelude::*;
 use gstreamer_app as gst_app;
 use gstreamer_video as gst_video;
 
+use super::dsp::AudioFx;
 use super::frame::{FrameSlot, PlanarFrame};
 use super::{
-    ClipRequest, Container, Event, Export, MediaInfo, PlaybackEngine, State, Track, TrackKind,
+    AudioEffects, ClipRequest, Container, Event, Export, MediaInfo, PlaybackEngine, State, Track,
+    TrackKind, MAX_VOLUME,
 };
 
 /// Somewhere for the engine to post events without knowing what the UI is.
@@ -87,6 +89,8 @@ pub struct GstEngine {
     seeking: AtomicBool,
     /// Where to seek next once the current one lands.
     pending_seek: Mutex<Option<Duration>>,
+    /// Dialogue lift, night mode and boost, run on the audio filter's output.
+    fx: Arc<Mutex<AudioFx>>,
 }
 
 impl GstEngine {
@@ -115,7 +119,8 @@ impl GstEngine {
         let sink = build_video_sink(&slot, &emit, last_frame_ns.clone())?;
         playbin.set_property("video-sink", &sink);
         playbin.set_property("audio-sink", &build_audio_sink()?);
-        playbin.set_property("audio-filter", &build_audio_filter()?);
+        let fx = Arc::new(Mutex::new(AudioFx::default()));
+        playbin.set_property("audio-filter", &build_audio_filter(fx.clone())?);
 
         let engine = Arc::new(Self {
             playbin,
@@ -130,6 +135,7 @@ impl GstEngine {
             last_frame_ns,
             seeking: AtomicBool::new(false),
             pending_seek: Mutex::new(None),
+            fx,
         });
 
         engine.clone().watch_bus()?;
@@ -588,8 +594,17 @@ impl PlaybackEngine for GstEngine {
         query_duration(&self.playbin)
     }
 
+    /// Up to 100% is playbin's own volume. Beyond that the gain is applied in
+    /// our filter instead, ahead of its limiter — playbin's volume above 1.0 is
+    /// plain multiplication, and clips the moment the film gets loud.
     fn set_volume(&self, volume: f64) {
-        self.playbin.set_property("volume", volume.clamp(0.0, 1.0));
+        let volume = volume.clamp(0.0, MAX_VOLUME);
+        self.playbin.set_property("volume", volume.min(1.0));
+        self.fx.lock().unwrap().set_boost(volume.max(1.0) as f32);
+    }
+
+    fn set_audio_effects(&self, effects: AudioEffects) {
+        self.fx.lock().unwrap().set_effects(effects);
     }
 
     fn set_rate(&self, rate: f64) {
@@ -1016,6 +1031,58 @@ fn build_audio_sink() -> Result<gst::Element> {
     Ok(sink)
 }
 
+/// Run [`AudioFx`] on every buffer leaving `pad`, and keep it told what format
+/// those buffers are in.
+fn attach_effects(pad: &gst::Pad, fx: Arc<Mutex<AudioFx>>) {
+    pad.add_probe(
+        gst::PadProbeType::BUFFER | gst::PadProbeType::EVENT_DOWNSTREAM,
+        move |_, info| {
+            match &mut info.data {
+                Some(gst::PadProbeData::Event(event)) => {
+                    if let gst::EventView::Caps(caps) = event.view() {
+                        if let Some(s) = caps.caps().structure(0) {
+                            let channels = s.get::<i32>("channels").unwrap_or(2).max(1) as usize;
+                            let rate = s.get::<i32>("rate").unwrap_or(48_000).max(1) as u32;
+                            let mask = s
+                                .get::<gst::Bitmask>("channel-mask")
+                                .map(|m| m.0)
+                                .unwrap_or(0);
+                            fx.lock().unwrap().set_format(channels, rate, mask);
+                        }
+                    }
+                }
+                Some(gst::PadProbeData::Buffer(buffer)) => {
+                    let mut fx = fx.lock().unwrap();
+                    if !fx.is_active() {
+                        fx.process(&mut []);
+                        return gst::PadProbeReturn::Ok;
+                    }
+                    let Ok(mut map) = buffer.make_mut().map_writable() else {
+                        return gst::PadProbeReturn::Ok;
+                    };
+                    let bytes = map.as_mut_slice();
+                    match bytemuck::try_cast_slice_mut::<u8, f32>(bytes) {
+                        Ok(samples) if cfg!(target_endian = "little") => fx.process(samples),
+                        // Misaligned memory, or a big-endian host: work on a copy.
+                        _ => {
+                            let mut samples: Vec<f32> = bytes
+                                .chunks_exact(4)
+                                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                                .collect();
+                            fx.process(&mut samples);
+                            for (out, sample) in bytes.chunks_exact_mut(4).zip(samples) {
+                                out.copy_from_slice(&sample.to_le_bytes());
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+            gst::PadProbeReturn::Ok
+        },
+    );
+}
+
 /// Conversion and resampling, inserted by playbin *before* the sink.
 ///
 /// This lives in `audio-filter` rather than in a bin wrapped around the sink,
@@ -1024,7 +1091,10 @@ fn build_audio_sink() -> Result<gst::Element> {
 /// stays in 32-bit float so nothing quantises until the sink makes the single
 /// conversion to the device format, resampling uses the best kernel GStreamer
 /// has rather than the default, and TPDF dither is applied on the way down.
-fn build_audio_filter() -> Result<gst::Element> {
+///
+/// The optional effects in [`AudioFx`] run on the output of this chain, where
+/// the samples are guaranteed to be interleaved 32-bit float.
+fn build_audio_filter(fx: Arc<Mutex<AudioFx>>) -> Result<gst::Element> {
     let convert = gst::ElementFactory::make("audioconvert")
         .property_from_str("dithering", "tpdf")
         .build()
@@ -1040,6 +1110,7 @@ fn build_audio_filter() -> Result<gst::Element> {
             "caps",
             gst::Caps::builder("audio/x-raw")
                 .field("format", "F32LE")
+                .field("layout", "interleaved")
                 .build(),
         )
         .build()
@@ -1056,6 +1127,7 @@ fn build_audio_filter() -> Result<gst::Element> {
     let src_pad = float
         .static_pad("src")
         .ok_or_else(|| anyhow!("capsfilter has no src pad"))?;
+    attach_effects(&src_pad, fx);
 
     bin.add_pad(&gst::GhostPad::with_target(&sink_pad).context("ghosting the filter input")?)
         .context("adding the filter input")?;
@@ -1476,6 +1548,53 @@ mod tests {
         );
 
         let _ = std::fs::remove_file(&output);
+    }
+
+    /// The effects must see real buffers, with the channel layout from the caps:
+    /// a 5.1 tone through the actual filter comes out with its centre lifted.
+    #[test]
+    fn effects_run_inside_the_audio_filter() {
+        gst::init().expect("gst init");
+        let fx = Arc::new(Mutex::new(AudioFx::default()));
+        fx.lock().unwrap().set_effects(AudioEffects { dialogue: true, night: false });
+
+        let pipeline = gst::parse::launch(
+            "audiotestsrc num-buffers=4 wave=ticks volume=0.2 \
+             ! audio/x-raw,format=S16LE,rate=48000,channels=6,channel-mask=(bitmask)0x3f \
+             ! identity name=filter ! appsink name=out sync=false",
+        )
+        .expect("pipeline")
+        .downcast::<gst::Pipeline>()
+        .unwrap();
+
+        // Put the real filter where the placeholder is.
+        let placeholder = pipeline.by_name("filter").unwrap();
+        let upstream = placeholder.static_pad("sink").unwrap().peer().unwrap();
+        let out = pipeline.by_name("out").unwrap();
+        pipeline.remove(&placeholder).unwrap();
+        let filter = build_audio_filter(fx).expect("filter");
+        pipeline.add(&filter).unwrap();
+        upstream.link(&filter.static_pad("sink").unwrap()).unwrap();
+        filter.link(&out).unwrap();
+
+        let sink = out.downcast::<gst_app::AppSink>().unwrap();
+        pipeline.set_state(gst::State::Playing).unwrap();
+        let sample = sink.pull_sample().expect("a buffer came through");
+        let map = sample.buffer().unwrap().map_readable().unwrap();
+        let samples: Vec<f32> = map
+            .as_slice()
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .collect();
+        pipeline.set_state(gst::State::Null).unwrap();
+
+        let loudest = |channel: usize| {
+            samples
+                .chunks_exact(6)
+                .fold(0.0f32, |m, frame| m.max(frame[channel].abs()))
+        };
+        let ratio = loudest(2) / loudest(0);
+        assert!((ratio - 2.0).abs() < 0.01, "centre should be 6 dB over front left, got {ratio}");
     }
 
     use super::clean_cue;

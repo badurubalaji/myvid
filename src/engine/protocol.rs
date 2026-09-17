@@ -16,7 +16,7 @@ use rustix::net::{
     SendAncillaryMessage, SendFlags, SocketFlags, SocketType,
 };
 
-use super::{MediaInfo, State, Track, TrackKind};
+use super::{AudioEffects, MediaInfo, State, Track, TrackKind};
 
 /// Generous for a track listing; nothing here carries pixels.
 const MAX_MESSAGE: usize = 256 * 1024;
@@ -38,6 +38,7 @@ pub enum Request {
     Pause,
     Seek(u64),
     Volume(f64),
+    AudioEffects(AudioEffects),
     Rate(f64),
     SelectTrack {
         kind: TrackKind,

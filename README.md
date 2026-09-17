@@ -63,6 +63,19 @@ audio track is selected automatically on load, by channel count and then
 bitrate, rather than whichever the container happened to list first. Playback
 continues while the panel is open, so you can hear the track you just chose.
 
+## Sound
+
+The same panel has two switches, both off by default:
+
+- **Clear dialogue** lifts the centre channel of 5.1 and 7.1 tracks, where films
+  put the voices, by 6 dB against everything else. Stereo tracks are unchanged.
+- **Night mode** compresses the dynamic range, so quiet scenes come up and loud
+  ones come down.
+
+Volume goes to 150%. Everything above 100%, and anything the switches push past
+full scale, goes through a limiter, so it gets louder without clipping. With
+both switches off and volume at or below 100%, the samples are not touched.
+
 ## Clips
 
 Mark a range with `I` and `O`, pick MKV or MP4, and `E` writes it out. The copy

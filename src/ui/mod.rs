@@ -15,8 +15,8 @@ use iced::window;
 use iced::{Alignment, Element, Length, Subscription, Task};
 
 use crate::engine::{
-    self, format_time, ClipRequest, Container, Export, FrameSlot, MediaInfo, PlaybackEngine, Track,
-    TrackKind,
+    self, format_time, AudioEffects, ClipRequest, Container, Export, FrameSlot, MediaInfo,
+    PlaybackEngine, Track, TrackKind, MAX_VOLUME,
 };
 use crate::render::VideoSurface;
 use icons::Glyph;
@@ -60,6 +60,7 @@ pub struct Myvid {
     duration: Option<Duration>,
     volume: f32,
     muted: bool,
+    effects: AudioEffects,
     rate: f64,
     buffering: Option<u8>,
     subtitle: Option<String>,
@@ -94,6 +95,7 @@ pub enum Message {
     SeekFraction(f32),
     SetVolume(f32),
     ToggleMute,
+    SetAudioEffects(AudioEffects),
     StepRate(i32),
     OpenDialog,
     Picked(Option<std::path::PathBuf>),
@@ -131,6 +133,7 @@ impl Myvid {
                 duration: None,
                 volume: 1.0,
                 muted: false,
+                effects: AudioEffects::default(),
                 rate: 1.0,
                 buffering: None,
                 subtitle: None,
@@ -245,7 +248,7 @@ impl Myvid {
 
             Message::SetVolume(volume) => {
                 self.wake();
-                self.volume = volume.clamp(0.0, 1.0);
+                self.volume = volume.clamp(0.0, MAX_VOLUME as f32);
                 self.muted = self.volume == 0.0;
                 if let Some(engine) = &self.engine {
                     engine.set_volume(self.volume as f64);
@@ -257,6 +260,13 @@ impl Myvid {
                 self.muted = !self.muted;
                 if let Some(engine) = &self.engine {
                     engine.set_volume(if self.muted { 0.0 } else { self.volume as f64 });
+                }
+            }
+
+            Message::SetAudioEffects(effects) => {
+                self.effects = effects;
+                if let Some(engine) = &self.engine {
+                    engine.set_audio_effects(effects);
                 }
             }
 
@@ -424,6 +434,7 @@ impl Myvid {
             engine::Event::Ready(engine) => {
                 self.slot = engine.frames();
                 engine.set_volume(self.volume as f64);
+                engine.set_audio_effects(self.effects);
                 self.engine = Some(engine);
 
                 if let Some(pending) = self.pending.take() {
@@ -861,14 +872,22 @@ impl Myvid {
             ),
             container(
                 slider(
-                    0.0..=1.0,
+                    0.0..=MAX_VOLUME as f32,
                     if self.muted { 0.0 } else { self.volume },
                     Message::SetVolume
                 )
                 .step(0.01_f32)
                 .style(theme::volume)
             )
-            .width(78),
+            .width(96),
+            // Only worth saying once it is past what the file itself provides.
+            text(if !self.muted && self.volume > 1.0 {
+                format!("{:.0}%", self.volume * 100.0)
+            } else {
+                String::new()
+            })
+            .size(11)
+            .color(theme::ACCENT),
             Space::new().width(8),
             text(format!(
                 "{} / {}",
@@ -989,6 +1008,33 @@ impl Myvid {
             }
             body = body.push(list);
         }
+
+        body = body.push(section("Sound"));
+        body = body.push(
+            column![
+                simple_row(
+                    "Clear dialogue",
+                    // Stereo has no centre channel to lift, and guessing one
+                    // from the mix colours the music as much as the voices.
+                    "Lifts voices in 5.1 and 7.1 tracks",
+                    self.effects.dialogue,
+                    Message::SetAudioEffects(AudioEffects {
+                        dialogue: !self.effects.dialogue,
+                        ..self.effects
+                    }),
+                ),
+                simple_row(
+                    "Night mode",
+                    "Quiet scenes up, loud scenes down",
+                    self.effects.night,
+                    Message::SetAudioEffects(AudioEffects {
+                        night: !self.effects.night,
+                        ..self.effects
+                    }),
+                ),
+            ]
+            .spacing(4),
+        );
 
         body = body.push(section("Video"));
         body = body.push(

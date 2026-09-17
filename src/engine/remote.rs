@@ -17,7 +17,7 @@ use super::frame::FrameSlot;
 use super::gst::EventSink;
 use super::protocol::{Channel, Notice, Request};
 use super::shm::{SharedFrame, Surface};
-use super::{ClipRequest, Event, Export, PlaybackEngine, TrackKind};
+use super::{AudioEffects, ClipRequest, Event, Export, PlaybackEngine, TrackKind};
 
 pub struct RemoteEngine {
     channel: Mutex<Arc<Channel>>,
@@ -250,6 +250,10 @@ impl PlaybackEngine for RemoteEngine {
 
     fn set_volume(&self, volume: f64) {
         self.request(Request::Volume(volume));
+    }
+
+    fn set_audio_effects(&self, effects: AudioEffects) {
+        self.request(Request::AudioEffects(effects));
     }
 
     fn set_rate(&self, rate: f64) {

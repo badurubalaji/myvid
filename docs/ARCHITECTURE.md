@@ -168,6 +168,15 @@ until the sink makes the single conversion to the device format, with TPDF
 dither. When the file's rate already matches the device — 48 kHz here — no
 resampling happens at all.
 
+**Sound effects are a pad probe on that chain's output, not more elements.**
+`engine::dsp::AudioFx` runs on the float buffers leaving the caps filter:
+centre-channel lift (read from the caps' `channel-mask`), a soft-knee compressor
+for night mode, the volume above 100%, and a limiter last. It has no lookahead,
+so it adds no latency and the audio sink's clock is untouched. When nothing is
+enabled the probe returns without mapping the buffer. Up to 100% volume is still
+playbin's own `volume`; only the boost goes through the limiter, because
+playbin's volume above 1.0 is plain multiplication and clips.
+
 **The best audio track is chosen, not the first one.** playbin3 defaults to the
 first stream of each kind. On a `StreamCollection` message we score audio streams
 by channel count, then bitrate, and send a `SelectStreams` event. On the test

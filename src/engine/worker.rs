@@ -169,6 +169,7 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
                 Request::Pause => engine.pause(),
                 Request::Seek(ns) => engine.seek(Duration::from_nanos(ns)),
                 Request::Volume(v) => engine.set_volume(v),
+                Request::AudioEffects(effects) => engine.set_audio_effects(effects),
                 Request::Rate(r) => engine.set_rate(r),
                 Request::SelectTrack { kind, id } => engine.select_track(kind, id.as_deref()),
                 Request::Shutdown => break,
