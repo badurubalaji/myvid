@@ -887,7 +887,9 @@ fn build_text_sink(emit: &EventSink) -> Result<gst::Element> {
 ///
 /// Covers the three things that actually show up: ASS/SSA override blocks in
 /// braces, the comma-separated ASS event fields, and the pango/HTML-ish tags
-/// SubRip is allowed to carry.
+/// SubRip is allowed to carry. GStreamer hands text cues over as pango markup,
+/// so `'` arrives as `&apos;` and `&` as `&amp;`; those entities are decoded
+/// last, after the tags are gone, so an escaped `&lt;i&gt;` survives as text.
 fn clean_cue(raw: &str) -> String {
     let mut text = raw.trim().to_owned();
 
@@ -925,7 +927,59 @@ fn clean_cue(raw: &str) -> String {
         }
     }
 
-    out.trim().to_owned()
+    decode_entities(out.trim())
+}
+
+/// Resolve XML/HTML character entities in a single pass, so `&amp;apos;`
+/// becomes `&apos;` rather than `'`. Anything unrecognised is kept verbatim.
+fn decode_entities(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        rest = &rest[amp..];
+
+        // Entities are short; a `;` further away than this is not ending one.
+        let decoded = rest
+            .char_indices()
+            .take(12)
+            .find(|&(_, c)| c == ';')
+            .and_then(|(semi, _)| Some((entity(&rest[1..semi])?, semi)));
+
+        match decoded {
+            Some((c, semi)) => {
+                out.push(c);
+                rest = &rest[semi + 1..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+
+    out.push_str(rest);
+    out
+}
+
+fn entity(name: &str) -> Option<char> {
+    let named = match name {
+        "amp" => '&',
+        "lt" => '<',
+        "gt" => '>',
+        "quot" => '"',
+        "apos" => '\'',
+        "nbsp" => '\u{a0}',
+        _ => {
+            let code = match name.strip_prefix('#')? {
+                hex if hex.starts_with(['x', 'X']) => u32::from_str_radix(&hex[1..], 16).ok()?,
+                dec => dec.parse().ok()?,
+            };
+            return char::from_u32(code);
+        }
+    };
+    Some(named)
 }
 
 /// The audio sink, chosen for its clock before anything else.
@@ -1450,6 +1504,28 @@ mod tests {
     fn drops_the_nine_ass_event_fields() {
         let line = "Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Actual text";
         assert_eq!(clean_cue(line), "Actual text");
+    }
+
+    #[test]
+    fn decodes_the_entities_subparse_escapes() {
+        // What GStreamer's subparse actually emits for `Let's go "now" & <i>then</i>`.
+        let cue = "Let&apos;s go &quot;now&quot; &amp; <i>then</i>";
+        assert_eq!(clean_cue(cue), "Let's go \"now\" & then");
+    }
+
+    #[test]
+    fn decodes_numeric_entities() {
+        assert_eq!(clean_cue("Let&#39;s go &#x2014; caf&#233;"), "Let's go — café");
+    }
+
+    #[test]
+    fn keeps_escaped_angle_brackets_as_text() {
+        assert_eq!(clean_cue("1 &lt; 2 &amp;&amp; <b>3</b> &gt; 2"), "1 < 2 && 3 > 2");
+    }
+
+    #[test]
+    fn decodes_only_once_and_leaves_stray_ampersands() {
+        assert_eq!(clean_cue("&amp;apos; Tom & Jerry &bogus; &"), "&apos; Tom & Jerry &bogus; &");
     }
 }
 
