@@ -1111,6 +1111,11 @@ fn build_audio_filter(fx: Arc<Mutex<AudioFx>>) -> Result<gst::Element> {
             gst::Caps::builder("audio/x-raw")
                 .field("format", "F32LE")
                 .field("layout", "interleaved")
+                // Never hand the sink a single channel. A mono track left to
+                // the sound server can come out of one earpiece only; asking
+                // for two or more makes audioconvert copy it to both sides,
+                // and leaves stereo and surround tracks as they are.
+                .field("channels", gst::IntRange::new(2, 64))
                 .build(),
         )
         .build()
