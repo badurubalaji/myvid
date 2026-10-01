@@ -9,7 +9,7 @@ use std::os::fd::AsRawFd;
 use std::process::{Child, Command};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 
@@ -41,6 +41,45 @@ pub struct RemoteEngine {
     effects: Mutex<AudioEffects>,
     /// `open` only has `&self`, but restarting hands the listener an `Arc`.
     this: Weak<Self>,
+    /// What the watchdog needs to tell a stalled decoder from a paused one.
+    watch: Mutex<Watch>,
+}
+
+/// If playback is wanted but the position has not moved for this long, the
+/// decoder is replaced.
+///
+/// Rarely, pausing and resuming wedges the pipeline inside the audio sink: the
+/// state change never completes, and every later pause or play is ignored, so
+/// the picture stays frozen until the file is reopened. It is rare enough that
+/// it could not be pinned down, and it happens below any code of ours. A
+/// decoder is a disposable process, though, so rather than leave someone
+/// staring at a still frame, start a new one at the same position.
+const STALL: Duration = Duration::from_secs(3);
+/// A file that stalls again straight after being restarted is not going to be
+/// fixed by restarting it in a loop.
+const RECOVERY_COOLDOWN: Duration = Duration::from_secs(15);
+
+struct Watch {
+    /// The person wants it playing: they pressed play, or opened a file.
+    playing: bool,
+    buffering: bool,
+    /// The last time the position moved, or anything happened that could
+    /// legitimately hold it still for a moment (a seek, a track change).
+    progress: Instant,
+    last_position: u64,
+    last_recovery: Option<Instant>,
+}
+
+impl Watch {
+    fn new() -> Self {
+        Watch {
+            playing: false,
+            buffering: false,
+            progress: Instant::now(),
+            last_position: 0,
+            last_recovery: None,
+        }
+    }
 }
 
 impl RemoteEngine {
@@ -61,9 +100,11 @@ impl RemoteEngine {
             volume: Mutex::new(1.0),
             effects: Mutex::new(AudioEffects::default()),
             this: this.clone(),
+            watch: Mutex::new(Watch::new()),
         });
 
         engine.restart()?;
+        Self::watchdog(Arc::downgrade(&engine));
         Ok(engine)
     }
 
@@ -109,6 +150,75 @@ impl RemoteEngine {
         self.request(Request::Volume(*self.volume.lock().unwrap()));
         self.request(Request::AudioEffects(*self.effects.lock().unwrap()));
         Ok(())
+    }
+
+    /// Checks twice a second whether playback has wedged. Holds only a weak
+    /// reference, so it ends with the engine.
+    fn watchdog(engine: Weak<Self>) {
+        std::thread::Builder::new()
+            .name("myvid-watchdog".into())
+            .spawn(move || loop {
+                std::thread::sleep(Duration::from_millis(500));
+                let Some(engine) = engine.upgrade() else {
+                    return;
+                };
+                if engine.stalled() {
+                    engine.recover();
+                }
+            })
+            .expect("watchdog thread");
+    }
+
+    fn stalled(&self) -> bool {
+        let watch = self.watch.lock().unwrap();
+        watch.playing
+            && !watch.buffering
+            && watch.progress.elapsed() >= STALL
+            && watch
+                .last_recovery
+                .is_none_or(|at| at.elapsed() >= RECOVERY_COOLDOWN)
+    }
+
+    /// Something happened that may hold the position still for a moment.
+    fn touch(&self, playing: Option<bool>) {
+        let mut watch = self.watch.lock().unwrap();
+        watch.progress = Instant::now();
+        if let Some(playing) = playing {
+            watch.playing = playing;
+        }
+    }
+
+    /// Replace a wedged decoder with a fresh one, resuming where it froze.
+    ///
+    /// Only for local files. A network stream that stops moving is far more
+    /// likely to be the network, and reconnecting would not help.
+    fn recover(self: &Arc<Self>) {
+        let Some(uri) = self.source.lock().unwrap().clone() else {
+            return;
+        };
+        let Ok((path, _)) = ::gstreamer::glib::filename_from_uri(&uri) else {
+            return;
+        };
+        let at = self.position.load(Ordering::Relaxed);
+        {
+            let mut watch = self.watch.lock().unwrap();
+            watch.last_recovery = Some(Instant::now());
+            watch.progress = Instant::now();
+        }
+        eprintln!(
+            "myvid: playback stalled at {:.1}s; restarting the decoder",
+            at as f64 / 1e9
+        );
+
+        if let Err(err) = self.restart() {
+            (self.emit)(Event::Error(format!("could not restart the decoder: {err:#}")));
+            return;
+        }
+        self.spent.store(true, Ordering::SeqCst);
+        self.request(Request::PlayPath {
+            path: path.to_string_lossy().into_owned(),
+            start: at,
+        });
     }
 
     fn listen(self: Arc<Self>, epoch: u64) {
@@ -191,13 +301,21 @@ impl RemoteEngine {
 
                         Notice::Position(ns) => {
                             self.position.store(ns, Ordering::Relaxed);
+                            let mut watch = self.watch.lock().unwrap();
+                            if watch.last_position != ns {
+                                watch.last_position = ns;
+                                watch.progress = Instant::now();
+                            }
                         }
                         Notice::Duration(ns) => {
                             self.duration.store(ns, Ordering::Relaxed);
                             (self.emit)(Event::Duration(Duration::from_nanos(ns)));
                         }
                         Notice::State(state) => (self.emit)(Event::State(state)),
-                        Notice::Buffering(p) => (self.emit)(Event::Buffering(p)),
+                        Notice::Buffering(p) => {
+                            self.watch.lock().unwrap().buffering = p < 100;
+                            (self.emit)(Event::Buffering(p))
+                        }
                         Notice::Loaded(info) => (self.emit)(Event::Loaded(info)),
                         Notice::Tracks(tracks) => (self.emit)(Event::Tracks(tracks)),
                         Notice::Subtitle { text, start, end } => (self.emit)(Event::Subtitle {
@@ -205,8 +323,16 @@ impl RemoteEngine {
                             start: Duration::from_nanos(start),
                             end: Duration::from_nanos(end),
                         }),
-                        Notice::Eos => (self.emit)(Event::Eos),
-                        Notice::Failed(message) => (self.emit)(Event::Error(message)),
+                        Notice::Eos => {
+                            self.touch(Some(false));
+                            (self.emit)(Event::Eos)
+                        }
+                        Notice::Failed(message) => {
+                            // An error is reported, not retried behind the
+                            // person's back.
+                            self.touch(Some(false));
+                            (self.emit)(Event::Error(message))
+                        }
                     }
                 }
             })
@@ -239,6 +365,15 @@ impl PlaybackEngine for RemoteEngine {
         self.position.store(0, Ordering::Relaxed);
         self.duration.store(0, Ordering::Relaxed);
         *self.source.lock().unwrap() = Some(uri.to_owned());
+        {
+            // The decoder starts playing on its own once the file is open.
+            // Finding the streams in a large file takes a moment, so allow for
+            // that before counting a still position as a stall.
+            let mut watch = self.watch.lock().unwrap();
+            *watch = Watch::new();
+            watch.playing = true;
+            watch.progress = Instant::now() + Duration::from_secs(5);
+        }
 
         // Whatever the previous decoder was given, it can never read this.
         if self.spent.swap(true, Ordering::SeqCst) {
@@ -249,7 +384,10 @@ impl PlaybackEngine for RemoteEngine {
         match ::gstreamer::glib::filename_from_uri(uri) {
             // A local file: give it a decoder of its own, confined to it.
             Ok((path, _)) => {
-                self.request(Request::PlayPath(path.to_string_lossy().into_owned()));
+                self.request(Request::PlayPath {
+                    path: path.to_string_lossy().into_owned(),
+                    start: 0,
+                });
             }
             // A network source needs no file access at all.
             Err(_) => self.request(Request::PlayUri(uri.to_owned())),
@@ -259,14 +397,17 @@ impl PlaybackEngine for RemoteEngine {
     }
 
     fn play(&self) {
+        self.touch(Some(true));
         self.request(Request::Resume);
     }
 
     fn pause(&self) {
+        self.touch(Some(false));
         self.request(Request::Pause);
     }
 
     fn seek(&self, to: Duration) {
+        self.touch(None);
         self.request(Request::Seek(to.as_nanos() as u64));
     }
 
@@ -290,6 +431,7 @@ impl PlaybackEngine for RemoteEngine {
     }
 
     fn set_rate(&self, rate: f64) {
+        self.touch(None);
         self.request(Request::Rate(rate));
     }
 
@@ -298,6 +440,7 @@ impl PlaybackEngine for RemoteEngine {
     }
 
     fn select_track(&self, kind: TrackKind, id: Option<&str>) {
+        self.touch(None);
         self.request(Request::SelectTrack {
             kind,
             id: id.map(str::to_owned),
@@ -436,6 +579,63 @@ mod tests {
 
         let errors: Vec<String> = rx.try_iter().collect();
         assert!(errors.is_empty(), "reopening produced errors: {errors:#?}");
+    }
+
+    /// A decoder that stops making progress is replaced, and playback carries
+    /// on from where it froze.
+    ///
+    /// The real wedge is rare and cannot be caused on demand, so this freezes
+    /// the decode process outright with SIGSTOP, which looks the same from the
+    /// player's side: no frames, no position, no reply to pause or play.
+    /// Played at zero volume.
+    #[test]
+    fn a_frozen_decoder_is_replaced() {
+        let (Some(media), Some(_worker)) = (
+            std::env::var_os("MYVID_TEST_MEDIA"),
+            std::env::var_os("MYVID_WORKER"),
+        ) else {
+            eprintln!("skipped: set MYVID_TEST_MEDIA and MYVID_WORKER");
+            return;
+        };
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let emit: EventSink = Arc::new(move |event| {
+            if let Event::Error(message) = event {
+                let _ = tx.send(message);
+            }
+        });
+
+        let engine = RemoteEngine::spawn(emit).expect("decode process starts");
+        engine.set_volume(0.0);
+        let uri = to_uri(&media.to_string_lossy()).expect("uri");
+        engine.open(&uri).expect("open");
+        engine.play();
+        std::thread::sleep(Duration::from_secs(4));
+
+        let frozen_at = engine.position().unwrap_or_default();
+        let pid = engine.child.lock().unwrap().as_ref().expect("a decoder").id();
+        rustix::process::kill_process(
+            rustix::process::Pid::from_raw(pid as i32).expect("pid"),
+            rustix::process::Signal::STOP,
+        )
+        .expect("freeze the decoder");
+
+        // Stall window, restart, preroll, and a little playback.
+        std::thread::sleep(STALL + Duration::from_secs(5));
+
+        let replaced = engine.child.lock().unwrap().as_ref().map(|c| c.id()) != Some(pid);
+        let resumed_at = engine.position().unwrap_or_default();
+        drop(engine);
+
+        assert!(replaced, "the frozen decoder should have been replaced");
+        assert!(
+            resumed_at > frozen_at + Duration::from_secs(1),
+            "playback should continue from {frozen_at:?}, got {resumed_at:?}"
+        );
+        // Resuming mid-file, not from the beginning.
+        assert!(resumed_at < frozen_at + Duration::from_secs(10));
+        let errors: Vec<String> = rx.try_iter().collect();
+        assert!(errors.is_empty(), "recovery produced errors: {errors:#?}");
     }
 
     /// Seeking through the decode process, which is what the player does.

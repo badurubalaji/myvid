@@ -30,5 +30,14 @@ fn main() -> iced::Result {
         _ => {}
     }
 
+    // Wayland gives an application no way to keep its own window above the
+    // others, or to place it — both of which the mini player needs — so the
+    // window goes through XWayland unless asked not to. Done first thing,
+    // while this is still the only thread.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("MYVID_WAYLAND").is_none() && std::env::var_os("DISPLAY").is_some() {
+        std::env::remove_var("WAYLAND_DISPLAY");
+    }
+
     ui::run()
 }

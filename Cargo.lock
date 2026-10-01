@@ -1975,6 +1975,7 @@ name = "myvid"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ashpd",
  "bincode",
  "bytemuck",
  "gstreamer",
@@ -1984,7 +1985,9 @@ dependencies = [
  "landlock",
  "rfd",
  "rustix 1.1.4",
+ "tokio",
  "wgpu",
+ "zbus",
 ]
 
 [[package]]

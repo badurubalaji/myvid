@@ -25,6 +25,10 @@ use super::{
 /// Somewhere for the engine to post events without knowing what the UI is.
 pub type EventSink = Arc<dyn Fn(Event) + Send + Sync>;
 
+/// Seeks no further than this from the current position land on the exact
+/// frame; longer ones snap to a keyframe. Covers every skip key and button.
+const PRECISE_SEEK_RANGE: Duration = Duration::from_secs(60);
+
 /// Whether a decoder factory name belongs to a GPU decoder.
 ///
 /// Matching a fixed list of names got this wrong: `vavp8dec` was reported as
@@ -498,18 +502,26 @@ impl GstEngine {
         self.seeking.store(true, Ordering::Release);
         let target = gst::ClockTime::from_nseconds(to.as_nanos() as u64);
 
-        // SNAP_BEFORE matters as much as the clamp. KEY_UNIT alone snaps to the
+        // A short jump lands exactly where it was asked to. Snapping to a
+        // keyframe cannot: with keyframes ten seconds apart, a five-second
+        // skip forward snaps back to the keyframe it started from, so the
+        // arrow keys and the skip buttons appeared to do nothing at all.
+        // Decoding forward from the keyframe to the target costs a fraction of
+        // a second for a jump this small.
+        //
+        // A long jump keeps the keyframe snap, which is instant. SNAP_BEFORE
+        // matters there as much as the clamp: KEY_UNIT alone snaps to the
         // *nearest* keyframe, which near the end of a file means snapping
         // forward past the last byte - the demuxer then reads nothing and
-        // reports a missing header. Snapping backwards always lands on data,
-        // and landing a fraction early is what every player does anyway.
-        if self
-            .playbin
-            .seek_simple(
-                gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT | gst::SeekFlags::SNAP_BEFORE,
-                target,
-            )
-            .is_err()
+        // reports a missing header. Snapping backwards always lands on data.
+        let from = self.position().unwrap_or_default();
+        let short = to.abs_diff(from) <= PRECISE_SEEK_RANGE;
+        let flags = if short {
+            gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE
+        } else {
+            gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT | gst::SeekFlags::SNAP_BEFORE
+        };
+        if self.playbin.seek_simple(flags, target).is_err()
         {
             self.seeking.store(false, Ordering::Release);
             // Not surfaced: a refused seek is not something the user did, and
@@ -530,6 +542,14 @@ impl GstEngine {
         if let Some(next) = next {
             self.issue_seek(next);
         }
+    }
+
+    /// Wait for the pipeline to preroll, then seek. A seek sent while playbin
+    /// is still finding its streams is refused, so starting mid-file has to
+    /// wait for the first frame to exist.
+    pub fn seek_once_prerolled(&self, to: Duration) {
+        let _ = self.playbin.state(gst::ClockTime::from_seconds(5));
+        self.seek(to);
     }
 
     fn set_state(&self, state: gst::State) {
@@ -942,7 +962,11 @@ fn clean_cue(raw: &str) -> String {
         }
     }
 
-    decode_entities(out.trim())
+    // Blank lines inside a cue (padding some subtitle files use to raise a
+    // line, or `\N\N` with nothing between) would stack up beneath the text
+    // and lift it towards the middle of the picture.
+    let lines: Vec<&str> = out.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+    decode_entities(&lines.join("\n"))
 }
 
 /// Resolve XML/HTML character entities in a single pass, so `&amp;apos;`
@@ -1622,6 +1646,12 @@ mod tests {
     #[test]
     fn turns_ass_breaks_into_newlines() {
         assert_eq!(clean_cue("first\\Nsecond"), "first\nsecond");
+    }
+
+    #[test]
+    fn collapses_blank_lines_inside_a_cue() {
+        assert_eq!(clean_cue("first\\N\\N\\Nsecond"), "first\nsecond");
+        assert_eq!(clean_cue("one\n\n  \ntwo  \n"), "one\ntwo");
     }
 
     #[test]

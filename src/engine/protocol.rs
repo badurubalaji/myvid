@@ -31,7 +31,10 @@ pub enum Request {
     /// decoder is confined to the single film it was started for. `fdsrc`, which
     /// needs no path at all, mishandles seeks near the end of a file; `filesrc`
     /// does not, and this keeps the confinement without paying that price.
-    PlayPath(String),
+    ///
+    /// `start` is where to begin, in nanoseconds: zero for a file just opened,
+    /// the stalled position when a wedged decoder is being replaced.
+    PlayPath { path: String, start: u64 },
     /// Play a network source, which the decoder must open itself.
     PlayUri(String),
     Resume,

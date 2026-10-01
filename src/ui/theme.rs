@@ -76,6 +76,28 @@ pub fn caption(_theme: &iced::Theme) -> container::Style {
     }
 }
 
+/// A light shade over the mini player's picture, so its controls read.
+pub fn scrim(_theme: &iced::Theme) -> container::Style {
+    container::Style {
+        background: Some(Background::Color(rgba(0x00, 0x00, 0x00, 0.35))),
+        ..container::Style::default()
+    }
+}
+
+/// The label that appears over a control when the pointer rests on it.
+pub fn tooltip(_theme: &iced::Theme) -> container::Style {
+    container::Style {
+        text_color: Some(TEXT),
+        background: Some(Background::Color(rgba(0x13, 0x12, 0x10, 0.94))),
+        border: Border {
+            color: GLASS_BORDER,
+            width: 1.0,
+            radius: 6.0.into(),
+        },
+        ..container::Style::default()
+    }
+}
+
 pub fn error_chip(_theme: &iced::Theme) -> container::Style {
     container::Style {
         text_color: Some(TEXT),
