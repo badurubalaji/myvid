@@ -119,13 +119,31 @@ paste and press Enter. HTTP, HTTPS, HLS, DASH, RTSP, RTMP, UDP and SRT all work.
 | `M` | mute |
 | `F` | fullscreen (`Esc` leaves) |
 | `T` | tracks and speed panel |
+| `P` | mini player (`Esc` returns) |
 | `I` `O` | mark clip in / out |
 | `E` | export the marked clip |
 | `Ctrl`+`O` | open a file |
 | `Ctrl`+`L` | open a stream URL |
 
 The controls fade after 2.4 s of a still pointer while playing, and come back on
-any movement, keypress or state change.
+any movement, keypress or state change. They stay up while the pointer is over
+them, and every button names itself and its shortcut when you hover it.
+
+While a video is playing, the screen does not blank and the computer does not
+suspend. Pausing lets it sleep again.
+
+## Mini player
+
+Switch to another app while a video is playing and myvid shrinks into a small
+window in the corner of the screen that stays on top of everything else. Press
+anywhere on the picture and drag to move it; it comes back to the same place
+next time. Hover it for play, skip, and a button back to the full player — or
+press `P` or `Esc`. `P` also opens the mini player by hand.
+
+Wayland gives an application no way to keep its own window on top, so on a
+Wayland desktop myvid runs through XWayland. To run it as a native Wayland
+window instead, and give up the always-on-top mini player, start it with
+`MYVID_WAYLAND=1`.
 
 ## Tracks
 

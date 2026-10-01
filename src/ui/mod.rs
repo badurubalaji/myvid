@@ -2,6 +2,7 @@
 //! surface that gets out of the way when you stop touching it.
 
 mod icons;
+mod inhibit;
 mod theme;
 
 use std::sync::Arc;
@@ -9,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use iced::keyboard::{key::Named, Key};
 use iced::widget::{
-    button, column, container, row, slider, stack, text, text_input, Space,
+    button, column, container, row, slider, stack, text, text_input, tooltip, mouse_area, Space,
 };
 use iced::window;
 use iced::{Alignment, Element, Length, Subscription, Task};
@@ -27,6 +28,16 @@ const TICK: Duration = Duration::from_millis(150);
 const SKIP: i64 = 10;
 /// Identifier for the URL field, so it can be focused when the prompt opens.
 const URL_FIELD: &str = "myvid-url-field";
+/// The main window's smallest size, and what it returns to after the mini player.
+const MIN_WINDOW: iced::Size = iced::Size::new(480.0, 300.0);
+/// The mini player's width; its height follows the video's shape.
+const MINI_WIDTH: f32 = 400.0;
+/// Space kept between the mini player and the screen's edges when it first
+/// appears, clear of a bottom panel or dock.
+const MINI_MARGIN: f32 = 32.0;
+/// Space between a cue and the bottom of the window, when nothing is below it.
+const SUBTITLE_GAP: f32 = 64.0;
+const MINI_SUBTITLE_GAP: f32 = 10.0;
 /// Playback speeds `[` and `]` step through.
 const RATES: &[f64] = &[0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
@@ -36,7 +47,7 @@ pub fn run() -> iced::Result {
         .title(Myvid::title)
         .theme(Myvid::theme)
         .window(window::Settings {
-            min_size: Some(iced::Size::new(480.0, 300.0)),
+            min_size: Some(MIN_WINDOW),
             // Wayland takes the window icon from the desktop entry whose
             // basename matches this id, so the icon costs nothing in the binary.
             platform_specific: window::settings::PlatformSpecific {
@@ -78,6 +89,24 @@ pub struct Myvid {
     fullscreen: bool,
     /// A file is being dragged over the window.
     hovering: bool,
+    /// The pointer is over the control bar, so it must not fade from under it.
+    over_controls: bool,
+    /// Playing in a small borderless window that floats above other apps.
+    mini: bool,
+    /// Where the mini player was last dragged to, so it comes back there.
+    mini_position: Option<iced::Point>,
+    /// The window's size and position, tracked from its events so the full
+    /// player can be put back exactly as it was.
+    window_size: iced::Size,
+    window_position: Option<iced::Point>,
+    /// Where the full player was when the mini player took over, and whether
+    /// it was fullscreen, so leaving the mini player puts it back as it was.
+    restore: Option<(iced::Size, Option<iced::Point>, bool)>,
+    /// The file picker is open. It takes focus, which must not count as the
+    /// person switching to another app.
+    picking: bool,
+    /// Keeps the desktop from blanking or suspending while playing.
+    sleep: inhibit::SleepInhibitor,
     /// Contents of the URL prompt while it is open.
     url_prompt: Option<String>,
     /// A file named on the command line, held until the engine exists.
@@ -90,6 +119,20 @@ pub enum Message {
     Tick(Instant),
     Key(iced::keyboard::Event),
     Activity,
+    OverControls(bool),
+    /// The window gained (`true`) or lost focus.
+    Focus(bool),
+    WindowMoved(iced::Point),
+    WindowResized(iced::Size),
+    /// What the window manager says the window's mode is, which can change
+    /// without us asking (a shortcut of its own, a move between monitors).
+    FullscreenIs(bool),
+    /// The window's new size, with whether it is fullscreen at that size.
+    WindowSettled(iced::Size, bool),
+    EnterMini,
+    ExitMini,
+    ToggleMini,
+    DragWindow,
     TogglePlay,
     Skip(i64),
     SeekFraction(f32),
@@ -149,6 +192,14 @@ impl Myvid {
                 last_activity: Instant::now(),
                 fullscreen: false,
                 hovering: false,
+                over_controls: false,
+                mini: false,
+                mini_position: None,
+                window_size: iced::Size::new(1280.0, 720.0),
+                window_position: None,
+                restore: None,
+                picking: false,
+                sleep: inhibit::SleepInhibitor::spawn(),
                 url_prompt: None,
                 pending,
             },
@@ -190,7 +241,17 @@ impl Myvid {
                 }
                 // Chrome only hides while something is actually playing.
                 let idle = now.duration_since(self.last_activity) > IDLE_TIMEOUT;
-                self.chrome = !(idle && self.state.is_playing() && self.buffering.is_none());
+                self.chrome = !(idle
+                    && !self.over_controls
+                    && self.state.is_playing()
+                    && self.buffering.is_none());
+            }
+
+            Message::OverControls(over) => {
+                self.over_controls = over;
+                if over {
+                    self.wake();
+                }
             }
 
             Message::Activity => {
@@ -286,29 +347,186 @@ impl Myvid {
 
             Message::OpenDialog => {
                 self.wake();
+                self.picking = true;
                 return Task::perform(pick_file(), Message::Picked);
             }
 
             Message::Picked(Some(path)) => {
+                self.picking = false;
                 return self.open(&path.to_string_lossy());
             }
-            Message::Picked(None) => {}
+            Message::Picked(None) => self.picking = false,
+
+            // Switching to another app while a video plays shrinks the player
+            // into a corner rather than leaving it buried behind the new app.
+            // Only then: a paused or empty player has nothing worth floating,
+            // and the file picker taking focus is not the person leaving.
+            //
+            // Never from fullscreen. With a second monitor, a fullscreen video
+            // on one screen while working on the other is the whole point, and
+            // dragging a file in from the file manager takes focus too; both
+            // used to shrink the player into a borderless window the size of
+            // the screen, which looked fullscreen and would not leave it.
+            Message::Focus(false) => {
+                if self.state.is_playing()
+                    && self.source.is_some()
+                    && !self.fullscreen
+                    && !self.mini
+                    && !self.picking
+                    && self.url_prompt.is_none()
+                {
+                    return self.update(Message::EnterMini);
+                }
+            }
+            Message::Focus(true) => {}
+
+            // Only the windowed full player's geometry is worth restoring.
+            // Recording it while fullscreen made "back to the full player"
+            // restore a window covering the whole monitor.
+            Message::WindowMoved(position) => {
+                if self.mini {
+                    self.mini_position = Some(position);
+                } else if !self.fullscreen {
+                    self.window_position = Some(position);
+                }
+            }
+            // A resize is also how a mode change made elsewhere shows up, so
+            // ask for the mode before deciding whether this size is worth keeping.
+            Message::WindowResized(size) => {
+                return window::latest().and_then(move |id| {
+                    window::mode(id).map(move |mode| {
+                        Message::WindowSettled(size, mode == window::Mode::Fullscreen)
+                    })
+                });
+            }
+            Message::WindowSettled(size, fullscreen) => {
+                if !self.mini {
+                    self.fullscreen = fullscreen;
+                    if !fullscreen {
+                        self.window_size = size;
+                    }
+                }
+            }
+            Message::FullscreenIs(fullscreen) => {
+                if !self.mini {
+                    self.fullscreen = fullscreen;
+                }
+            }
+
+            Message::ToggleMini => {
+                return self.update(if self.mini {
+                    Message::ExitMini
+                } else {
+                    Message::EnterMini
+                });
+            }
+
+            Message::EnterMini => {
+                if self.mini || self.source.is_none() {
+                    return Task::none();
+                }
+                self.mini = true;
+                self.panel = false;
+                let leave_fullscreen = std::mem::take(&mut self.fullscreen);
+                self.restore = Some((self.window_size, self.window_position, leave_fullscreen));
+
+                let aspect = if self.info.width > 0 && self.info.height > 0 {
+                    self.info.height as f32 / self.info.width as f32
+                } else {
+                    9.0 / 16.0
+                };
+                let size = iced::Size::new(MINI_WIDTH, (MINI_WIDTH * aspect).clamp(160.0, 320.0));
+                let remembered = self.mini_position;
+
+                return window::latest().and_then(move |id| {
+                    let mut steps = Vec::new();
+                    if leave_fullscreen {
+                        steps.push(window::set_mode(id, window::Mode::Windowed));
+                    }
+                    steps.push(window::toggle_decorations(id));
+                    steps.push(window::set_min_size(id, Some(iced::Size::new(240.0, 135.0))));
+                    steps.push(window::resize(id, size));
+                    steps.push(window::set_level(id, window::Level::AlwaysOnTop));
+                    // Back where it was last dragged, or the bottom-right corner.
+                    steps.push(match remembered {
+                        Some(position) => window::move_to(id, position),
+                        None => window::monitor_size(id).then(move |monitor| match monitor {
+                            Some(monitor) => window::move_to(
+                                id,
+                                iced::Point::new(
+                                    (monitor.width - size.width - MINI_MARGIN).max(0.0),
+                                    (monitor.height - size.height - MINI_MARGIN * 2.0).max(0.0),
+                                ),
+                            ),
+                            None => Task::none(),
+                        }),
+                    });
+                    Task::batch(steps)
+                });
+            }
+
+            Message::ExitMini => {
+                if !self.mini {
+                    return Task::none();
+                }
+                self.mini = false;
+                self.wake();
+                let (size, position, fullscreen) = self
+                    .restore
+                    .take()
+                    .unwrap_or((iced::Size::new(1280.0, 720.0), None, false));
+                self.fullscreen = fullscreen;
+
+                return window::latest().and_then(move |id| {
+                    let mut steps = vec![
+                        window::set_level(id, window::Level::Normal),
+                        window::toggle_decorations(id),
+                        window::set_min_size(id, Some(MIN_WINDOW)),
+                        window::resize(id, size),
+                    ];
+                    if let Some(position) = position {
+                        steps.push(window::move_to(id, position));
+                    }
+                    if fullscreen {
+                        steps.push(window::set_mode(id, window::Mode::Fullscreen));
+                    }
+                    steps.push(window::gain_focus(id));
+                    Task::batch(steps)
+                });
+            }
+
+            Message::DragWindow => {
+                return window::latest().and_then(window::drag);
+            }
 
             Message::ToggleFullscreen => {
                 self.wake();
-                self.fullscreen = !self.fullscreen;
-                let mode = if self.fullscreen {
-                    window::Mode::Fullscreen
-                } else {
-                    window::Mode::Windowed
-                };
-                return window::latest().and_then(move |id| window::set_mode(id, mode));
+                if self.mini {
+                    return self.update(Message::ExitMini);
+                }
+                // Ask the window what it is rather than trusting our flag: if
+                // the two ever disagree, flipping the flag would request the
+                // mode the window is already in, and F or Esc did nothing.
+                return window::latest().and_then(|id| {
+                    window::mode(id).then(move |mode| {
+                        let fullscreen = mode != window::Mode::Fullscreen;
+                        let mode = if fullscreen {
+                            window::Mode::Fullscreen
+                        } else {
+                            window::Mode::Windowed
+                        };
+                        window::set_mode(id, mode).chain(Task::done(Message::FullscreenIs(fullscreen)))
+                    })
+                });
             }
 
             Message::Dropped(path) => {
                 self.hovering = false;
                 self.wake();
-                return self.open(&path.to_string_lossy());
+                // The file manager the file came from still has the keyboard,
+                // so without this the shortcuts go to it, not to the player.
+                let focus = window::latest().and_then(window::gain_focus);
+                return Task::batch([self.open(&path.to_string_lossy()), focus]);
             }
 
             Message::DragOver(hovering) => {
@@ -504,6 +722,10 @@ impl Myvid {
             }
         }
 
+        // Every state change arrives through here, so this is the one place
+        // that needs to keep the inhibitor in step with playback.
+        self.sleep.set(self.state.is_playing());
+
         Task::none()
     }
 
@@ -547,6 +769,7 @@ impl Myvid {
             Key::Named(Named::ArrowRight) => Some(Message::Skip(5)),
             Key::Named(Named::ArrowUp) => Some(Message::SetVolume(self.volume + 0.05)),
             Key::Named(Named::ArrowDown) => Some(Message::SetVolume(self.volume - 0.05)),
+            Key::Named(Named::Escape) if self.mini => Some(Message::ExitMini),
             Key::Named(Named::Escape) if self.fullscreen => Some(Message::ToggleFullscreen),
             _ => match letter.as_deref() {
                 Some("j") => Some(Message::Skip(-SKIP)),
@@ -556,7 +779,8 @@ impl Myvid {
                 Some("m") => Some(Message::ToggleMute),
                 Some("o") => Some(Message::MarkOut),
                 Some("i") => Some(Message::MarkIn),
-                Some("t") => Some(Message::TogglePanel),
+                Some("t") if !self.mini => Some(Message::TogglePanel),
+                Some("p") => Some(Message::ToggleMini),
                 Some("e") if self.clip_in.is_some() => Some(Message::ExportClip),
                 Some("[") => Some(Message::StepRate(-1)),
                 Some("]") => Some(Message::StepRate(1)),
@@ -627,6 +851,14 @@ impl Myvid {
                 iced::Event::Window(window::Event::FilesHoveredLeft) => {
                     Some(Message::DragOver(false))
                 }
+                iced::Event::Window(window::Event::Focused) => Some(Message::Focus(true)),
+                iced::Event::Window(window::Event::Unfocused) => Some(Message::Focus(false)),
+                iced::Event::Window(window::Event::Moved(position)) => {
+                    Some(Message::WindowMoved(position))
+                }
+                iced::Event::Window(window::Event::Resized(size)) => {
+                    Some(Message::WindowResized(size))
+                }
                 _ => None,
             }),
         ])
@@ -644,11 +876,20 @@ impl Myvid {
 
         let mut layers: Vec<Element<'_, Message>> = vec![stage.into()];
 
+        if self.mini {
+            if let Some(cue) = &self.subtitle {
+                layers.push(subtitle_layer(cue, MINI_SUBTITLE_GAP));
+            }
+            layers.push(self.mini_layer());
+            return stack(layers).width(Length::Fill).height(Length::Fill).into();
+        }
+
+        let chrome = self.source.is_some() && !self.hovering && self.chrome;
         if self.source.is_none() {
             layers.push(self.empty_state());
         } else if self.hovering {
             layers.push(self.drop_overlay());
-        } else if self.chrome {
+        } else if chrome {
             layers.push(self.chrome_layer());
         }
 
@@ -656,8 +897,10 @@ impl Myvid {
             layers.push(self.panel_layer());
         }
 
-        if let Some(cue) = &self.subtitle {
-            layers.push(self.subtitle_layer(cue));
+        // With the controls up, the cue is laid out in their column instead,
+        // so it sits on top of the bar at whatever height the bar really is.
+        if let Some(cue) = self.subtitle.as_deref().filter(|_| !chrome) {
+            layers.push(subtitle_layer(cue, SUBTITLE_GAP));
         }
 
         if let Some(percent) = self.buffering {
@@ -804,13 +1047,74 @@ impl Myvid {
         .into()
     }
 
+    /// The mini player: the picture is the handle — press anywhere and drag
+    /// to move it — with play and expand appearing only while the pointer is
+    /// over it.
+    fn mini_layer(&self) -> Element<'_, Message> {
+        let controls: Element<'_, Message> = if self.chrome {
+            let play = with_tip(
+                button(
+                    container(icons::icon(
+                        if self.state.is_playing() { Glyph::Pause } else { Glyph::Play },
+                        15.0,
+                        theme::TEXT,
+                    ))
+                    .center_x(Length::Fill)
+                    .center_y(Length::Fill),
+                )
+                .width(36)
+                .height(36)
+                .padding(0)
+                .style(theme::primary_button)
+                .on_press(Message::TogglePlay),
+                if self.state.is_playing() { "Pause  (Space)" } else { "Play  (Space)" },
+            );
+
+            container(
+                column![
+                    row![
+                        text("Drag to move").size(10).color(theme::MUTED),
+                        Space::new().width(Length::Fill),
+                        icon_button(
+                            Glyph::Fullscreen,
+                            17.0,
+                            Message::ExitMini,
+                            "Back to full player  (P or Esc)"
+                        ),
+                    ]
+                    .align_y(Alignment::Center),
+                    Space::new().height(Length::Fill),
+                    row![
+                        icon_button(Glyph::Back10, 17.0, Message::Skip(-SKIP), "Back 10 s  (J)"),
+                        play,
+                        icon_button(Glyph::Forward10, 17.0, Message::Skip(SKIP), "Forward 10 s  (L)"),
+                    ]
+                    .spacing(10)
+                    .align_y(Alignment::Center),
+                ]
+                .align_x(Alignment::Center),
+            )
+            .padding(8)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(theme::scrim)
+            .into()
+        } else {
+            Space::new().width(Length::Fill).height(Length::Fill).into()
+        };
+
+        mouse_area(controls)
+            .on_press(Message::DragWindow)
+            .interaction(iced::mouse::Interaction::Grab)
+            .into()
+    }
+
     fn chrome_layer(&self) -> Element<'_, Message> {
-        column![
-            self.title_bar(),
-            Space::new().height(Length::Fill),
-            self.control_bar(),
-        ]
-        .into()
+        let mut layer = column![self.title_bar(), Space::new().height(Length::Fill)];
+        if let Some(cue) = &self.subtitle {
+            layer = layer.push(container(caption(cue)).center_x(Length::Fill));
+        }
+        layer.push(self.control_bar()).into()
     }
 
     fn title_bar(&self) -> Element<'_, Message> {
@@ -852,8 +1156,8 @@ impl Myvid {
         };
 
         let transport = row![
-            icon_button(Glyph::Back10, 21.0, Message::Skip(-SKIP)),
-            button(
+            icon_button(Glyph::Back10, 21.0, Message::Skip(-SKIP), "Back 10 s  (J)"),
+            with_tip(button(
                 container(icons::icon(play_glyph, 17.0, theme::TEXT))
                     .center_x(Length::Fill)
                     .center_y(Length::Fill)
@@ -863,14 +1167,16 @@ impl Myvid {
             .padding(0)
             .style(theme::primary_button)
             .on_press(Message::TogglePlay),
-            icon_button(Glyph::Forward10, 21.0, Message::Skip(SKIP)),
+                if self.state.is_playing() { "Pause  (Space)" } else { "Play  (Space)" }),
+            icon_button(Glyph::Forward10, 21.0, Message::Skip(SKIP), "Forward 10 s  (L)"),
             Space::new().width(6),
             icon_button(
                 if self.muted { Glyph::Mute } else { Glyph::Volume },
                 19.0,
-                Message::ToggleMute
+                Message::ToggleMute,
+                if self.muted { "Unmute  (M)" } else { "Mute  (M)" },
             ),
-            container(
+            with_tip(container(
                 slider(
                     0.0..=MAX_VOLUME as f32,
                     if self.muted { 0.0 } else { self.volume },
@@ -879,7 +1185,7 @@ impl Myvid {
                 .step(0.01_f32)
                 .style(theme::volume)
             )
-            .width(96),
+            .width(96), "Volume  (↑ ↓)"),
             // Only worth saying once it is past what the file itself provides.
             text(if !self.muted && self.volume > 1.0 {
                 format!("{:.0}%", self.volume * 100.0)
@@ -912,8 +1218,24 @@ impl Myvid {
                 } else {
                     theme::MUTED
                 }),
-            icon_button(Glyph::Scissors, 20.0, Message::MarkIn),
-            icon_button(Glyph::Sliders, 21.0, Message::TogglePanel),
+            icon_button(
+                Glyph::Scissors,
+                20.0,
+                Message::MarkIn,
+                "Mark clip start here  (I · O marks the end)"
+            ),
+            icon_button(
+                Glyph::MiniPlayer,
+                20.0,
+                Message::EnterMini,
+                "Mini player, on top of other apps  (P)"
+            ),
+            icon_button(
+                Glyph::Sliders,
+                21.0,
+                Message::TogglePanel,
+                "Audio, subtitles and speed  (T)"
+            ),
             icon_button(
                 if self.fullscreen {
                     Glyph::ExitFullscreen
@@ -921,7 +1243,8 @@ impl Myvid {
                     Glyph::Fullscreen
                 },
                 21.0,
-                Message::ToggleFullscreen
+                Message::ToggleFullscreen,
+                if self.fullscreen { "Exit fullscreen  (F)" } else { "Fullscreen  (F)" },
             ),
         ]
         .spacing(14)
@@ -937,25 +1260,12 @@ impl Myvid {
             .padding([18, 22])
             .style(theme::glass);
 
-        container(bar).padding([26, 32]).into()
-    }
-
-    /// Cues sit above the control bar when it is up, and drop into the space it
-    /// vacates when it is not — so a line never hides behind the chrome, and
-    /// never floats oddly high once the chrome is gone.
-    fn subtitle_layer<'a>(&self, cue: &'a str) -> Element<'a, Message> {
-        let bottom = if self.chrome { 190 } else { 64 };
-
         container(
-            container(text(cue).size(23).color(iced::Color::WHITE).center())
-                .padding([7, 15])
-                .style(theme::caption),
+            mouse_area(bar)
+                .on_enter(Message::OverControls(true))
+                .on_exit(Message::OverControls(false)),
         )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .align_x(Alignment::Center)
-        .align_y(Alignment::End)
-        .padding(iced::Padding::default().bottom(bottom))
+        .padding([26, 32])
         .into()
     }
 
@@ -1247,12 +1557,60 @@ impl Myvid {
 
 // --- helpers ------------------------------------------------------------
 
-fn icon_button<'a>(glyph: Glyph, size: f32, message: Message) -> Element<'a, Message> {
-    button(icons::icon(glyph, size, theme::TEXT))
-        .padding(5)
-        .style(theme::ghost_button)
-        .on_press(message)
+/// A subtitle cue on its dark backing.
+fn caption(cue: &str) -> Element<'_, Message> {
+    container(text(cue).size(23).color(iced::Color::WHITE).center())
+        .padding([7, 15])
+        .style(theme::caption)
         .into()
+}
+
+/// A cue near the bottom of the picture, for when the controls are hidden.
+///
+/// A fixed lift of 190 pixels, sized for the control bar of a large window,
+/// put cues in the middle of the mini player and of small windows. The bar is
+/// no longer allowed for here at all: while it is up the cue sits in its column.
+fn subtitle_layer(cue: &str, gap: f32) -> Element<'_, Message> {
+    container(caption(cue))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_x(Alignment::Center)
+        .align_y(Alignment::End)
+        .padding(iced::Padding::default().bottom(gap))
+        .into()
+}
+
+fn icon_button<'a>(
+    glyph: Glyph,
+    size: f32,
+    message: Message,
+    label: &'a str,
+) -> Element<'a, Message> {
+    with_tip(
+        button(icons::icon(glyph, size, theme::TEXT))
+            .padding(5)
+            .style(theme::ghost_button)
+            .on_press(message),
+        label,
+    )
+}
+
+/// Names a control, and its shortcut, above it once the pointer rests there.
+/// An icon alone leaves you guessing which way a double chevron skips.
+fn with_tip<'a>(
+    content: impl Into<Element<'a, Message>>,
+    label: &'a str,
+) -> Element<'a, Message> {
+    tooltip(
+        content,
+        text(label).size(11),
+        tooltip::Position::Top,
+    )
+    .gap(8)
+    .padding(7)
+    .delay(Duration::from_millis(350))
+    .style(theme::tooltip)
+    .into()
 }
 
 /// The letter a key press represents, and whether Ctrl was held.

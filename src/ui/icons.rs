@@ -21,6 +21,8 @@ pub enum Glyph {
     Folder,
     Sliders,
     Scissors,
+    /// A small picture inside a frame: shrink to the floating mini player.
+    MiniPlayer,
 }
 
 #[derive(Debug)]
@@ -151,6 +153,16 @@ impl<Message> canvas::Program<Message> for Icon {
                     frame.stroke(&ring, stroke());
                 }
             }
+            Glyph::MiniPlayer => {
+                let frame_path = Path::new(|b| {
+                    b.rounded_rectangle(Point::new(3.0, 5.0), Size::new(18.0, 14.0), 2.0.into());
+                });
+                frame.stroke(&frame_path, stroke());
+                let inset = Path::new(|b| {
+                    b.rounded_rectangle(Point::new(11.5, 11.5), Size::new(7.0, 5.0), 1.0.into());
+                });
+                frame.fill(&inset, self.color);
+            }
             Glyph::Folder => {
                 let folder = Path::new(|b| {
                     b.move_to(Point::new(3.2, 18.4));
@@ -175,7 +187,9 @@ fn chevrons(dir: f32) -> Path {
         for offset in [0.0_f32, 6.4] {
             let tip = 8.4 + offset;
             let tail = 13.0 + offset;
-            let (x0, x1) = if dir > 0.0 {
+            // As written, `tip` lies left of `tail`, which is a chevron
+            // pointing left; mirror it to point right.
+            let (x0, x1) = if dir < 0.0 {
                 (tip, tail)
             } else {
                 (24.0 - tip, 24.0 - tail)

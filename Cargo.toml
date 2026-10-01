@@ -30,6 +30,12 @@ bincode = { version = "2", features = ["derive", "std"] }
 landlock = "0.4"
 rustix = { version = "1", features = ["fs", "net", "mm", "process", "pipe", "event"] }
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
+# Keeping the screen awake during playback: D-Bus calls to the session manager,
+# with the portal as a fallback — the same crates rfd already pulls in, on a
+# small runtime of their own.
+ashpd = { version = "0.11", default-features = false, features = ["tokio"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+tokio = { version = "1", features = ["rt", "sync"] }
 
 # Small binary, no debug bloat. `cargo clean` after install reclaims target/.
 [profile.release]

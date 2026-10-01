@@ -102,7 +102,7 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
     for incoming in rx {
         match incoming {
             Incoming::Peer(request) => match request {
-                Request::PlayPath(path) => {
+                Request::PlayPath { path, start } => {
                     if confined {
                         channel.send(
                             &Notice::Failed(
@@ -143,6 +143,9 @@ fn serve(channel: Channel) -> anyhow::Result<()> {
                     if let Err(err) = engine.open(&uri) {
                         channel.send(&Notice::Failed(format!("{err:#}")), None)?;
                     } else {
+                        if start > 0 {
+                            engine.seek_once_prerolled(Duration::from_nanos(start));
+                        }
                         engine.play();
                     }
                 }
