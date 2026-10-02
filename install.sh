@@ -153,14 +153,14 @@ install_app() {
 [Desktop Entry]
 Type=Application
 Name=myvid
-GenericName=Video Player
-Comment=Play video files
+GenericName=Media Player
+Comment=Play video and music
 Icon=$APP
 Exec=$PREFIX/bin/$APP %f
 StartupWMClass=myvid
 Terminal=false
 Categories=AudioVideo;Player;Video;
-MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/mpeg;video/x-flv;video/mp2t;video/ogg;video/x-ms-wmv;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/mpeg;video/x-flv;video/mp2t;video/ogg;video/x-ms-wmv;application/x-matroska;audio/mpeg;audio/mp4;audio/x-m4a;audio/aac;audio/x-aac;audio/flac;audio/x-flac;audio/ogg;audio/opus;audio/x-wav;audio/x-ms-wma;audio/x-matroska;
 DESKTOP
 
     if command -v update-desktop-database >/dev/null 2>&1; then
