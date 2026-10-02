@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
 Name=myvid
-GenericName=Video Player
-Comment=Play video files and network streams
+GenericName=Media Player
+Comment=Play video, music and network streams
 Icon=myvid
 Exec=myvid %f
 StartupWMClass=myvid
 Terminal=false
 Categories=AudioVideo;Player;Video;
-Keywords=video;player;movie;film;stream;mkv;mp4;
-MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/mpeg;video/x-flv;video/mp2t;video/ogg;video/x-ms-wmv;application/x-matroska;
+Keywords=video;audio;music;player;movie;film;stream;mkv;mp4;mp3;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/mpeg;video/x-flv;video/mp2t;video/ogg;video/x-ms-wmv;application/x-matroska;audio/mpeg;audio/mp4;audio/x-m4a;audio/aac;audio/x-aac;audio/flac;audio/x-flac;audio/ogg;audio/opus;audio/x-wav;audio/x-ms-wma;audio/x-matroska;

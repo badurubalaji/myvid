@@ -1749,12 +1749,13 @@ fn short_name(uri: &str) -> String {
 
 async fn pick_file() -> Option<std::path::PathBuf> {
     rfd::AsyncFileDialog::new()
-        .set_title("Open video")
+        .set_title("Open media")
         .add_filter(
-            "Video",
+            "Video and audio",
             &[
                 "mkv", "mp4", "m4v", "webm", "avi", "mov", "ts", "m2ts", "flv", "ogv", "wmv",
-                "mpg", "mpeg",
+                "mpg", "mpeg", "mp3", "m4a", "aac", "flac", "ogg", "oga", "opus", "wav", "wma",
+                "mka",
             ],
         )
         .add_filter("All files", &["*"])
